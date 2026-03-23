@@ -39,3 +39,5 @@ export { default as ShadowIcon } from './shadow.svg?react';
 export { default as SwitchIcon } from './switch.svg?react';
 export { default as TrashIcon } from './trash.svg?react';
 export { default as UndoIcon } from './undo.svg?react';
+export { default as ImpalaLogoIcon } from './ImpalaLogoIcon.svg?react';
+

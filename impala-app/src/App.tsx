@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, useGLTF, Environment, ContactShadows } from '@react-three/drei';
-import { Button } from './components/buttons/buttons'
+import { Button } from './components/ui/buttons/buttons'
 import {ImportIcon} from './components/icons/index'
 
 function PreloadedModel() {
