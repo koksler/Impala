@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@theme {
+  --color-accent: #FF763B;
+  --color-bg: #FFFFFF;
+  --color-bg-item: #EBEBEB;
+  --color-done: #32925D;
+  --color-process: #FF9D00;
+  --color-fail: #CE3131;
+
+  --color-accent-border: #FFBA9D;
+  --color-bg-border: #F4F4F4;
+  --color-item-border: #969696;
+  
+  --color-text-accent: #210E01;
+  --color-text-main: #161616;
+}
+
+html, body, #root {
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
