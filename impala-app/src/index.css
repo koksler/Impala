@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
 @theme {
+  --font-sans: "Onest", sans-serif;
+  
   --color-accent: #FF763B;
   --color-bg: #FFFFFF;
   --color-bg-item: #EBEBEB;
@@ -14,6 +16,13 @@
   
   --color-text-accent: #210E01;
   --color-text-main: #161616;
+}
+
+body {
+  @apply font-sans;
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 html, body, #root {
