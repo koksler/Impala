@@ -32,3 +32,19 @@ html, body, #root {
   padding: 0;
   overflow: hidden;
 }
+
+/* Color Picker Customization - Hide Native Hue */
+.customized-saturation-only .react-colorful__hue {
+  display: none; /* Kills the horizontal slider */
+}
+
+.customized-saturation-only .react-colorful__saturation {
+  border-radius: 7px;
+  border-bottom: none;
+}
+
+/* Match the pointer to your screenshot */
+.customized-saturation-only .react-colorful__pointer {
+  width: 16px;
+  height: 16px;
+}
