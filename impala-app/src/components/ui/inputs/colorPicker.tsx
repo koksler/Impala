@@ -1,7 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { HexColorPicker } from 'react-colorful';
 
-/* I'll rewrite it, sometime */
+/* I'll rewrite it, sometime 
+
+TODO: Weird behavior with hue-selector when
+color is set to #FFFFFF or #000000
+
+*/
 
 interface ColorPickerProps {
     color: string;
