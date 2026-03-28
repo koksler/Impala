@@ -4,6 +4,8 @@ import { OrbitControls, useGLTF, Environment, ContactShadows } from '@react-thre
 import { Header } from './components/header';
 import { ObjectSettingsPanel } from './components/ui/menus/objectSettingsPanel'
 import { SceneSettingsPanel } from './components/ui/menus/sceneSettingsPanel';
+import { FloatingToolbar } from './components/ui/menus/floatingToolbar';
+import { TimelinePanel } from './components/ui/menus/timelinePanel';
 
 function PreloadedModel() {
   const { scene } = useGLTF('/model.glb');
@@ -40,6 +42,11 @@ export default function App() {
 
           <div className="pointer-events-auto h-full">
             <SceneSettingsPanel isMinimized={panelsMinimized} />
+          </div>
+
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
+            <FloatingToolbar/>
+            <TimelinePanel/>
           </div>
 
           <button 
