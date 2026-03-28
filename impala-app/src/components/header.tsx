@@ -13,12 +13,14 @@ interface HeaderProps {
     variant?: 'project' | 'home';
     projectName?: string;
     serverStatus?: 'online' | 'offline';
+    onGoHome?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
     variant = 'project',
-    projectName = 'current_project_name',
-    serverStatus = 'online'
+    projectName,
+    serverStatus = 'online',
+    onGoHome
 }) => {
     return (
         <header className="relative w-full h-[60px] px-[16px] py-[10px] flex items-center justify-between bg-bg border-b border-bg-border text-base text-text-main">
@@ -64,7 +66,7 @@ export const Header: React.FC<HeaderProps> = ({
                         <Button variant="icon">
                             <SaveIcon className="w-6 h-6" />
                         </Button>
-                        <Button variant="icon">
+                        <Button variant="icon" onClick={onGoHome}>
                             <HomeIcon className="w-6 h-6" />
                         </Button>
                     </>
