@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BannerCard } from './bannerCard';
 import { SearchBar } from '../inputs/searchBar';
 import { ProjectCard } from './projectCard';
@@ -15,6 +15,7 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
     const [searchQuery, setSearchQuery] = useState('');
     const [projects, setProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         fetch('/projects.json')
@@ -37,8 +38,61 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
         return `Last opened: ${diff} days ago`;
     };
 
+    const handleProcessVideo = async () => {
+        console.log("Sending request to backend");
+        
+        try {
+            const response = await fetch("http://localhost:8000/api/process-video", {
+                method: "POST"
+            });
+            
+            const data = await response.json();
+            console.log("Backend:", data);
+            
+            alert(`Success: ${data.message}`);
+            
+        } catch (error) {
+            console.error("Backend has died tragically", error);
+        }
+    };
+
+    const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        console.log("File selected:", file.name, "Size:", (file.size / 1024 / 1024).toFixed(2), "MB");
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+            const response = await fetch("http://localhost:8000/api/upload", {
+                method: "POST",
+                body: formData,
+            });
+
+            const data = await response.json();
+            console.log("Ответ сервера:", data);
+            
+            alert(`Success. File ${data.filename} on backend.`);
+            
+            // onOpenProject(); 
+
+        } catch (error) {
+            console.error("Error on load", error);
+            alert("Backend not responding");
+        }
+    };
+
     return (
         <div className="w-full h-full flex justify-center items-stretch pt-[20px] px-[20px] gap-[20px] bg-bg pb-[40px] overflow-hidden">
+            <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileSelect} 
+                className="hidden" 
+                accept="video/mp4,video/webm,image/jpeg,image/png" 
+            />
             <div className="flex flex-col gap-[20px] flex-1 max-w-[1208px]">
                 <BannerCard
                     title={
@@ -48,7 +102,7 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
                     imageSrc="/banners/coil.png"
                     buttons={
                         <>
-                            <Button variant="accent">
+                            <Button variant="accent" onClick={() => fileInputRef.current?.click()}>
                                 Load an image or a video
                             </Button>
                             <Button variant="menu-misc">
