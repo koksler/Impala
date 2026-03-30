@@ -1,2 +1,6 @@
 .obsidian
 .misc
+/impala-app/backend/frames
+/impala-app/backend/uploads
+/impala-app/backend/venv
+/impala-app/backend/__pycache__
