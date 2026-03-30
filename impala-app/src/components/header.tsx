@@ -12,7 +12,7 @@ import {
 interface HeaderProps {
     variant?: 'project' | 'home';
     projectName?: string;
-    serverStatus?: 'online' | 'offline';
+    serverStatus?: 'online' | 'offline' | 'checking';
     onGoHome?: () => void;
 }
 
@@ -34,8 +34,12 @@ export const Header: React.FC<HeaderProps> = ({
 
                 {variant === 'project' && (
                     <div className="flex items-center gap-2 text-sm font-medium">
-                        <span className='font-semibold text-base'>Server Status: {serverStatus.charAt(0).toUpperCase() + serverStatus.slice(1)}</span>
-                        <div className={`w-3 h-3 rounded-full ${serverStatus === 'online' ? 'bg-done' : 'bg-fail'}`} />
+                        <span>Server Status: {serverStatus.charAt(0).toUpperCase() + serverStatus.slice(1)}</span>
+                        <div className={`w-3 h-3 rounded-full ${
+                            serverStatus === 'online' ? 'bg-done' : 
+                            serverStatus === 'offline' ? 'bg-fail' : 
+                            'bg-process animate-pulse'
+                        }`} />
                     </div>
                 )}
             </div>
@@ -72,7 +76,6 @@ export const Header: React.FC<HeaderProps> = ({
                     </>
                 )}
 
-                {/* Settings is visible on both variants */}
                 <Button variant="icon">
                     <OptionsIcon className="w-6 h-6" />
                 </Button>

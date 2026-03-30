@@ -1,4 +1,4 @@
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, useGLTF, Environment, ContactShadows } from '@react-three/drei';
 import { Header } from './components/header';
@@ -6,6 +6,7 @@ import { ObjectSettingsPanel } from './components/ui/menus/objectSettingsPanel'
 import { SceneSettingsPanel } from './components/ui/menus/sceneSettingsPanel';
 import { HomePage } from './components/ui/menus/homePage';
 import type { Project } from './components/ui/menus/homePage';
+import { useStore } from './store';
 
 function PreloadedModel() {
   const { scene } = useGLTF('/model.glb');
@@ -16,6 +17,19 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState<'project' | 'home'>('home');
   const [activeProject, setActiveProject] = useState<Project | null>(null);
   const [panelsMinimized, setPanelsMinimized] = useState(false); // Change it to useStore later, sometime. :D
+
+  const serverStatus = useStore((state) => state.serverStatus);
+  const checkServerStatus = useStore((state) => state.checkServerStatus);
+
+  useEffect(() => { 
+    checkServerStatus();
+
+    const intervalId = setInterval(() => {
+        checkServerStatus();
+    }, 5000);
+
+    return () => clearInterval(intervalId)
+  }, [checkServerStatus]);
 
   const handleOpenProject = (project: Project) => {
     setActiveProject(project);
@@ -34,7 +48,7 @@ export default function App() {
         <Header 
           variant={currentPage} 
           projectName={activeProject?.title}
-          serverStatus="online"
+          serverStatus={serverStatus} 
           onGoHome={handleGoHome}
         />
         </div>
