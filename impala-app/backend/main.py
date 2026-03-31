@@ -4,7 +4,7 @@ import shutil
 import os
 import uuid
 
-from ml_pipeline import extract_frames
+from ml_pipeline import run_nerfstudio_pipeline
 
 app = FastAPI(title="Impala Backend Core")
 
@@ -19,25 +19,28 @@ app.add_middleware(
 UPLOAD_DIR = "uploads"
 FRAMES_DIR = "frames"
 
+UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
-os.makedirs(FRAMES_DIR, exist_ok=True)
 
 @app.get("/api/status")
 def get_status():
-    return {"status": "online"}
+    return {"status": "online", "version": "1.0.0"}
 
 def process_video_background(file_path: str, project_id: str):
-    output_folder = os.path.join(FRAMES_DIR, project_id)
-    extract_frames(video_path=file_path, output_dir=output_folder, fps_target=5)
+    print(f"[BACKGROUND] Starting pipeline for {project_id}")
+    success = run_nerfstudio_pipeline(video_path=file_path, project_id=project_id)
+    
+    if success:
+        print(f"[BACKGROUND] Project {project_id} is ready for 3D viewing!")
+        #todo Later: Updating json DB on finish
+    else:
+        print(f"[BACKGROUND] Project {project_id} failed.")
     
 @app.post("/api/upload")
 async def upload_file(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
     print(f"[UPLOAD] Receiving file: {file.filename}")
     
-    # Generate a unique safe ID for this project
     project_id = str(uuid.uuid4())
-    
-    # Extract the original extension (e.g., ".mp4")
     _, ext = os.path.splitext(file.filename)
     safe_filename = f"{project_id}{ext}"
     
@@ -46,13 +49,12 @@ async def upload_file(background_tasks: BackgroundTasks, file: UploadFile = File
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
         
-    print(f"[UPLOAD] File saved securely as: {safe_filename}")
+    print(f"[UPLOAD] File saved as: {safe_filename}")
     
     background_tasks.add_task(process_video_background, file_path, project_id)
     
     return {
         "status": "success", 
-        "original_filename": file.filename,
         "project_id": project_id,
-        "message": "File uploaded. Frame extraction started in the background."
+        "message": "Video uploaded. Neural Network training started!"
     }

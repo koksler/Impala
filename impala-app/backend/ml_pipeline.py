@@ -1,45 +1,54 @@
-import cv2
 import os
+import sys
+import subprocess
 
-def extract_frames(video_path: str, output_dir: str, fps_target: int = 5):
+def run_nerfstudio_pipeline(video_path: str, project_id: str):
     """
-    Extracts frames from a video file at a specific frame rate.
-    fps_target: How many frames to extract per second of video. 
-    (Gaussian splatting usually needs around 100-300 images total, not the full 30fps/60fps).
+    Runs the full Gaussian Splatting pipeline: Video -> COLMAP -> Splatfacto Training.
     """
-    print(f"[ML PIPELINE] Starting frame extraction for: {video_path}")
+    processed_dir = os.path.join("processed_data", project_id)
+    os.makedirs(processed_dir, exist_ok=True)
+
+    # sys.executable automatically points to venv/Scripts on Windows and venv/bin on Linux
+    venv_scripts_dir = os.path.dirname(sys.executable)
     
-    os.makedirs(output_dir, exist_ok=True)
+    # Windows uses .exe extensions, Linux/Mac do not
+    exe_ext = ".exe" if os.name == 'nt' else ""
     
-    cap = cv2.VideoCapture(video_path)
+    # Build exact paths
+    ns_process_exe = os.path.join(venv_scripts_dir, f"ns-process-data{exe_ext}")
+    ns_train_exe = os.path.join(venv_scripts_dir, f"ns-train{exe_ext}")
+
+    print(f"[PHASE 1] Starting COLMAP processing for {project_id}...")
     
-    if not cap.isOpened():
-        print(f"[ML PIPELINE] Error: Cannot open video {video_path}")
+    process_cmd = [
+        ns_process_exe, "video",
+        "--data", video_path,
+        "--output-dir", processed_dir,
+        "--num-frames-target", "150" 
+    ]
+    
+    try:
+        subprocess.run(process_cmd, check=True)
+        print(f"[PHASE 1] COLMAP finished successfully!")
+    except subprocess.CalledProcessError as e:
+        print(f"[PHASE 1] Error during processing: {e}")
         return False
 
-    original_fps = round(cap.get(cv2.CAP_PROP_FPS))
-    if original_fps == 0:
-        original_fps = 30
-        
-    # Calculate how many frames to skip to match the target FPS
-    # E.g., if original is 30fps and target is 5fps, we save every 6th frame.
-    frame_interval = max(1, original_fps // fps_target)
+    print(f"[PHASE 2] Starting Splatfacto training on RTX 3070...")
     
-    frame_count = 0
-    saved_count = 0
+    train_cmd = [
+        ns_train_exe, "splatfacto",
+        "--data", processed_dir,
+        # 7,000 for a draft
+        "--max-num-iterations", "7000", 
+        "--project-name", project_id
+    ]
     
-    while True:
-        success, frame = cap.read()
-        if not success:
-            break
-            
-        if frame_count % frame_interval == 0:
-            frame_filename = os.path.join(output_dir, f"frame_{saved_count:04d}.jpg")
-            cv2.imwrite(frame_filename, frame)
-            saved_count += 1
-            
-        frame_count += 1
-        
-    cap.release()
-    print(f"[ML PIPELINE] Extraction complete. Saved {saved_count} frames to {output_dir}")
-    return True
+    try:
+        subprocess.run(train_cmd, check=True)
+        print(f"[PHASE 2] Training complete for {project_id}!")
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"[PHASE 2] Training failed: {e}")
+        return False
