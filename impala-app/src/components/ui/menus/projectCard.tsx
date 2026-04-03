@@ -20,7 +20,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ title, date, imageSrc,
     return (
         <div 
             onDoubleClick={handleDoubleClick}
-            className="flex flex-col h-[300px] border border-text-main rounded-[15px] overflow-hidden cursor-pointer bg-bg select-none"
+            className="flex flex-col h-[150px] border border-text-main rounded-[15px] overflow-hidden cursor-pointer bg-bg select-none"
         >
             <div className="h-full w-full bg-bg-item overflow-hidden">
                 <img src={imageSrc} alt={title} className="w-full h-full object-cover pointer-events-none" />
@@ -28,7 +28,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ title, date, imageSrc,
             
             <div className="p-[12px] flex justify-between items-start">
                 <div className="flex flex-col gap-[4px]">
-                    <span className="font-bold text-[16px] text-text-main">{title}</span>
+                    <span className="font-bold text-[12px] text-text-main">{title}</span>
                     <span className="text-[12px] text-item-border">{date}</span>
                 </div>
                 <Button variant = 'misc' 

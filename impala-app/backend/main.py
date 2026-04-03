@@ -101,3 +101,10 @@ def background_pipeline(file_path: str, project_id: str, title: str):
         project_status_db[project_id]["project"] = new_project
     else:
         project_status_db[project_id] = {"status": "error", "progress": 0}
+        
+        
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["Cross-Origin-Resource-Policy"] = "cross-origin"
+    return response

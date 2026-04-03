@@ -4,9 +4,20 @@ import tailwindcss from '@tailwindcss/vite'
 import svgr from 'vite-plugin-svgr'
 
 export default defineConfig({
-  plugins:[
+  plugins: [
     react(),
     tailwindcss(),
-    svgr()
+    svgr({
+      svgrOptions: {
+        icon: true,
+        replaceAttrValues: { '#000': 'currentColor', 'black': 'currentColor' }
+      },
+    }),
   ],
+  server: {
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
+  },
 })

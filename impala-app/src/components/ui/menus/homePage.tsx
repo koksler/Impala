@@ -1,34 +1,47 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BannerCard } from './bannerCard';
 import { SearchBar } from '../inputs/searchBar';
 import { ProjectCard } from './projectCard';
 import { Button } from '../buttons/buttons';
+import { UploadModal } from './uploadModal';
 
+// 1. Updated interface to match Python backend
 export interface Project {
-    id: number;
+    id: string; // Changed to string because backend generates UUIDs
     title: string;
     lastOpened: string;
     img: string;
+    splat_url: string; // Added url for 3D Viewer
 }
 
 export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> = ({ onOpenProject }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [projects, setProjects] = useState<Project[]>([]);
-    const [loading, setLoading] = useState(true);
-    const fileInputRef = useRef<HTMLInputElement>(null);
+    const[loading, setLoading] = useState(true);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
+    // 2. Fetch projects and fix loading state
     useEffect(() => {
-        fetch('/projects.json')
+        fetch('http://localhost:8000/api/projects')
             .then(res => res.json())
             .then((data: Project[]) => {
                 setProjects(data);
-                setLoading(false);
+                setLoading(false); // Stop loading when data arrives
             })
             .catch(err => {
                 console.error('Failed to load projects:', err);
-                setLoading(false);
+                setLoading(false); // Stop loading even if there's an error
             });
-    }, []);
+    },[]);
+
+    // 3. Handle success from UploadModal
+    const handleProjectSuccess = (newProject: Project) => {
+        setIsModalOpen(false);
+        // Add the new project to the top of the UI list instantly
+        setProjects(prev =>[newProject, ...prev]);
+        // Open the 3D Viewer with this project
+        onOpenProject(newProject);
+    };
 
     const formatDate = (iso: string) => {
         const d = new Date(iso);
@@ -38,61 +51,16 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
         return `Last opened: ${diff} days ago`;
     };
 
-    const handleProcessVideo = async () => {
-        console.log("Sending request to backend");
-        
-        try {
-            const response = await fetch("http://localhost:8000/api/process-video", {
-                method: "POST"
-            });
-            
-            const data = await response.json();
-            console.log("Backend:", data);
-            
-            alert(`Success: ${data.message}`);
-            
-        } catch (error) {
-            console.error("Backend has died tragically", error);
-        }
-    };
-
-    const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-
-        console.log("File selected:", file.name, "Size:", (file.size / 1024 / 1024).toFixed(2), "MB");
-
-        const formData = new FormData();
-        formData.append("file", file);
-
-        try {
-            const response = await fetch("http://localhost:8000/api/upload", {
-                method: "POST",
-                body: formData,
-            });
-
-            const data = await response.json();
-            console.log("Ответ сервера:", data);
-            
-            alert(`Success. File ${data.filename} on backend.`);
-            
-            // onOpenProject(); 
-
-        } catch (error) {
-            console.error("Error on load", error);
-            alert("Backend not responding");
-        }
-    };
-
     return (
-        <div className="w-full h-full flex justify-center items-stretch pt-[20px] px-[20px] gap-[20px] bg-bg pb-[40px] overflow-hidden">
-            <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleFileSelect} 
-                className="hidden" 
-                accept="video/mp4,video/webm,image/jpeg,image/png" 
+        <div className="w-full h-full flex justify-center items-stretch p-[20px] gap-[20px] bg-bg pb-[40px] overflow-hidden">
+            
+            {/* Upload Modal handles files and polling now */}
+            <UploadModal 
+                isOpen={isModalOpen} 
+                onClose={() => setIsModalOpen(false)} 
+                onSuccess={handleProjectSuccess} 
             />
+            
             <div className="flex flex-col gap-[20px] flex-1 max-w-[1208px]">
                 <BannerCard
                     title={
@@ -102,7 +70,7 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
                     imageSrc="/banners/coil.png"
                     buttons={
                         <>
-                            <Button variant="accent" onClick={() => fileInputRef.current?.click()}>
+                            <Button variant="accent" onClick={() => setIsModalOpen(true)}>
                                 Load an image or a video
                             </Button>
                             <Button variant="menu-misc">
@@ -126,9 +94,9 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
                 />
             </div>
 
-            <div className="w-full max-w-[655px] h-full border border-text-main rounded-[15px] px-[20px] py-[30px] flex flex-col bg-bg shrink-0">
+            <div className="w-fit h-full border border-text-main rounded-[15px] px-[20px] py-[30px] flex flex-col bg-bg shrink-0">
 
-                <h1 className="font-bold text-[36px] text-text-accent text-center m-0 mb-[20px]">
+                <h1 className="font-bold text-[24px] text-text-accent text-center m-0 mb-[20px]">
                     Your previous projects
                 </h1>
 
@@ -148,6 +116,7 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
                                     title={project.title}
                                     date={formatDate(project.lastOpened)}
                                     imageSrc={project.img}
+                                    // Make sure ProjectCard handles the click to open
                                     onOpen={() => onOpenProject(project)}
                                     onDelete={() => console.log('Delete', project.id)}
                                 />
@@ -155,7 +124,6 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
                     )}
                 </div>
             </div>
-
         </div>
     );
 };

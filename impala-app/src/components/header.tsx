@@ -29,7 +29,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="flex items-center gap-6">
                 
                 <div className="flex items-center gap-2 cursor-pointer">
-                    <ImpalaLogoIcon className="w-auto h-8"/>
+                    <ImpalaLogoIcon className="w-[8em] h-8"/>
                 </div>
 
                 {variant === 'project' && (
