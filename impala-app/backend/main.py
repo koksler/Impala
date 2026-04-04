@@ -28,6 +28,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 app.mount("/exports", StaticFiles(directory=EXPORT_DIR), name="exports")
 app.mount("/projects_assets", StaticFiles(directory="projects_assets", html=True), name="projects_assets")
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 if not os.path.exists(PROJECTS_FILE):
     with open(PROJECTS_FILE, "w") as f:
@@ -45,7 +46,6 @@ def process_video_background(file_path: str, project_id: str):
     
     if success:
         print(f"[BACKGROUND] Project {project_id} is ready for 3D viewing!")
-        #todo Later: Updating json DB on finish
     else:
         print(f"[BACKGROUND] Project {project_id} failed.")
     
@@ -76,7 +76,7 @@ def get_project_status(project_id: str):
 
 
 def background_pipeline(file_path: str, project_id: str, title: str):
-    """Задача, которая выполняется в фоне, пока юзер смотрит на прогресс-бар"""
+    """Bg task during upload progress"""
     project_status_db[project_id] = {"status": "processing", "progress": 10}
     
     success = run_nerfstudio_pipeline(video_path=file_path, project_id=project_id)
@@ -89,7 +89,9 @@ def background_pipeline(file_path: str, project_id: str, title: str):
             "title": title,
             "lastOpened": datetime.now().strftime("%Y-%m-%d"),
             "img": "/projects_assets/default_thumb.webp",
-            "splat_url": f"http://localhost:8000/exports/{project_id}/splat.ply"
+            "splat_url": f"http://localhost:8000/exports/{project_id}/splat.ply",
+            "transforms_url": f"http://localhost:8000/api/projects/{project_id}/tracking",
+            "video_url": f"http://localhost:8000/uploads/{os.path.basename(file_path)}"
         }
         
         with open(PROJECTS_FILE, "r") as f:
@@ -108,3 +110,11 @@ async def add_security_headers(request, call_next):
     response = await call_next(request)
     response.headers["Cross-Origin-Resource-Policy"] = "cross-origin"
     return response
+
+@app.get("/api/projects/{project_id}/tracking")
+def get_project_tracking(project_id: str):
+    path = f"processed_data/{project_id}/transforms.json"
+    if os.path.exists(path):
+        with open(path, "r") as f:
+            return json.load(f)
+    return {"error": "Tracking data not found"}
