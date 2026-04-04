@@ -5,41 +5,37 @@ import { ProjectCard } from './projectCard';
 import { Button } from '../buttons/buttons';
 import { UploadModal } from './uploadModal';
 
-// 1. Updated interface to match Python backend
 export interface Project {
-    id: string; // Changed to string because backend generates UUIDs
+    id: string;
     title: string;
     lastOpened: string;
     img: string;
-    splat_url: string; // Added url for 3D Viewer
+    splat_url: string;
+    transforms_url: string;
 }
 
 export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> = ({ onOpenProject }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [projects, setProjects] = useState<Project[]>([]);
-    const[loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    // 2. Fetch projects and fix loading state
-    useEffect(() => {
+     useEffect(() => {
         fetch('http://localhost:8000/api/projects')
             .then(res => res.json())
             .then((data: Project[]) => {
                 setProjects(data);
-                setLoading(false); // Stop loading when data arrives
+                setLoading(false);
             })
             .catch(err => {
                 console.error('Failed to load projects:', err);
-                setLoading(false); // Stop loading even if there's an error
+                setLoading(false);
             });
-    },[]);
+    }, []);
 
-    // 3. Handle success from UploadModal
     const handleProjectSuccess = (newProject: Project) => {
         setIsModalOpen(false);
-        // Add the new project to the top of the UI list instantly
-        setProjects(prev =>[newProject, ...prev]);
-        // Open the 3D Viewer with this project
+        setProjects(prev => [newProject, ...prev]);
         onOpenProject(newProject);
     };
 
@@ -53,14 +49,13 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
 
     return (
         <div className="w-full h-full flex justify-center items-stretch p-[20px] gap-[20px] bg-bg pb-[40px] overflow-hidden">
-            
-            {/* Upload Modal handles files and polling now */}
-            <UploadModal 
-                isOpen={isModalOpen} 
-                onClose={() => setIsModalOpen(false)} 
-                onSuccess={handleProjectSuccess} 
+
+            <UploadModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onSuccess={handleProjectSuccess}
             />
-            
+
             <div className="flex flex-col gap-[20px] flex-1 max-w-[1208px]">
                 <BannerCard
                     title={
@@ -94,7 +89,7 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
                 />
             </div>
 
-            <div className="w-fit h-full border border-text-main rounded-[15px] px-[20px] py-[30px] flex flex-col bg-bg shrink-0">
+            <div className="flex-[0.35] h-full border border-text-main rounded-[15px] px-[20px] py-[30px] flex flex-col bg-bg">
 
                 <h1 className="font-bold text-[24px] text-text-accent text-center m-0 mb-[20px]">
                     Your previous projects
@@ -116,7 +111,6 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
                                     title={project.title}
                                     date={formatDate(project.lastOpened)}
                                     imageSrc={project.img}
-                                    // Make sure ProjectCard handles the click to open
                                     onOpen={() => onOpenProject(project)}
                                     onDelete={() => console.log('Delete', project.id)}
                                 />
