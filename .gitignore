@@ -6,3 +6,4 @@
 /impala-app/backend/__pycache__
 /impala-app/backend/outputs
 /impala-app/backend/processed_data
+/impala-app/backend/exports
