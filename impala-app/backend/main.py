@@ -7,8 +7,7 @@ import uuid
 import json
 from datetime import datetime
 from ml_pipeline import run_nerfstudio_pipeline
-
-from ml_pipeline import run_nerfstudio_pipeline
+import glob
 
 app = FastAPI(title="Impala Backend Core")
 
@@ -90,8 +89,7 @@ def background_pipeline(file_path: str, project_id: str, title: str):
             "lastOpened": datetime.now().strftime("%Y-%m-%d"),
             "img": "/projects_assets/default_thumb.webp",
             "splat_url": f"http://localhost:8000/exports/{project_id}/splat.ply",
-            "transforms_url": f"http://localhost:8000/api/projects/{project_id}/tracking",
-            "video_url": f"http://localhost:8000/uploads/{os.path.basename(file_path)}"
+            "cameras_url": f"http://localhost:8000/api/projects/{project_id}/cameras"
         }
         
         with open(PROJECTS_FILE, "r") as f:
@@ -118,3 +116,33 @@ def get_project_tracking(project_id: str):
         with open(path, "r") as f:
             return json.load(f)
     return {"error": "Tracking data not found"}
+
+@app.get("/api/projects/{project_id}/dataparser-transforms")
+def get_dataparser_transforms(project_id: str):
+    """Returns the nerfstudio dataparser_transforms.json that encodes the
+    applied_transform + scale used to align camera poses with the exported
+    Gaussian splat (.ply) coordinate space."""
+    search_pattern = os.path.join("outputs", project_id, "splatfacto", "*", "dataparser_transforms.json")
+    dp_paths = glob.glob(search_pattern)
+    
+    if not dp_paths:
+        return {"error": "Dataparser transforms not found"}
+        
+    latest_dp = max(dp_paths, key=os.path.getctime)
+    with open(latest_dp, "r") as f:
+        return json.load(f)
+    
+@app.get("/api/projects/{project_id}/cameras")
+def get_project_cameras(project_id: str):
+    path = f"exports/{project_id}/transforms_train.json"
+    
+    if os.path.exists(path):
+        with open(path, "r") as f:
+            return json.load(f)
+            
+    fallback_path = f"exports/{project_id}/cameras.json"
+    if os.path.exists(fallback_path):
+        with open(fallback_path, "r") as f:
+            return json.load(f)
+            
+    return {"error": "Camera data not found", "searched_path": path}

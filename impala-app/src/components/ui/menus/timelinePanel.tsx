@@ -14,8 +14,7 @@ import {
 
 export const TimelinePanel: React.FC = () => {
     const { isPlaying, setPlaying, currentFrame, setCurrentFrame, totalFrames } = useStore();
-    const { showVideo, showModels, showGrid, showSplat, toggleVisibility } = useStore();
-    const getBtnStyle = (isActive: boolean) => isActive ? "bg-bg-item border-item-border" : "";
+    const { showModels, showGrid, showSplat, toggleVisibility, cameraEnabled } = useStore();
 
     const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setCurrentFrame(parseInt(e.target.value));
@@ -34,17 +33,28 @@ export const TimelinePanel: React.FC = () => {
     return (
         <Panel className="w-full min-w-[442px] p-[16px] flex flex-col gap-[12px] pointer-events-auto">
             <div className="flex items-center justify-center gap-[8px]">
-            {renderToggle(showVideo, CameraIcon, () => toggleVisibility('showVideo'))}
-            {renderToggle(showModels, EyeOpenIcon, () => toggleVisibility('showModels'))}
-            {renderToggle(showGrid, NetIcon, () => toggleVisibility('showGrid'))}
-            {renderToggle(showSplat, GausssplatIcon, () => toggleVisibility('showSplat'))}
+
+                {/* Camera track: follow nerfstudio path + show video overlay together */}
+                {renderToggle(cameraEnabled, CameraIcon, () => {
+                    useStore.setState(s => ({
+                        cameraEnabled: !s.cameraEnabled,
+                        showVideo: !s.cameraEnabled,  // video on = camera on, off = camera off
+                    }));
+                })}
+
+                {/* Eye: toggle 3D virtual objects (cube, etc.) */}
+                {renderToggle(showModels, EyeOpenIcon, () => toggleVisibility('showModels'))}
+
+                {renderToggle(showGrid, NetIcon, () => toggleVisibility('showGrid'))}
+                {renderToggle(showSplat, GausssplatIcon, () => toggleVisibility('showSplat'))}
                 
-            <div className="w-[1px] h-[24px] bg-item-border mx-[4px] opacity-50"></div>
-    
-            <Button variant="toggle" className="border-transparent">
-                <ImportIcon className="w-6 h-6 text-item-border" />
-            </Button>
+                <div className="w-[1px] h-[24px] bg-item-border mx-[4px] opacity-50"></div>
+        
+                <Button variant="toggle" className="border-transparent">
+                    <ImportIcon className="w-6 h-6 text-item-border" />
+                </Button>
             </div>
+
 
             <div className="w-full h-[1px] bg-bg-border" />
 

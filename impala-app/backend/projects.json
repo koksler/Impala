@@ -1,10 +1,21 @@
 [
     {
+        "id": "8fe078aa-9432-4523-865f-98bd3c951cb3",
+        "title": "Zalupa",
+        "lastOpened": "2026-04-05",
+        "img": "/projects_assets/default_thumb.webp",
+        "splat_url": "http://localhost:8000/exports/8fe078aa-9432-4523-865f-98bd3c951cb3/splat.ply",
+        "cameras_url": "http://localhost:8000/api/projects/8fe078aa-9432-4523-865f-98bd3c951cb3/cameras",
+        "video_url": "http://localhost:8000/uploads/8fe078aa-9432-4523-865f-98bd3c951cb3.mp4"
+    },
+    {
         "id": "8f1ec8c8-0e45-4349-ace5-b6c8781fbd11",
         "title": "Democracy of \u042b",
         "lastOpened": "2026-04-03",
         "img": "/projects_assets/default_thumb.webp",
         "splat_url": "http://localhost:8000/exports/8f1ec8c8-0e45-4349-ace5-b6c8781fbd11/splat.ply",
+        "transforms_url": "http://localhost:8000/api/projects/8f1ec8c8-0e45-4349-ace5-b6c8781fbd11/tracking",
+        "dataparser_transforms_url": "http://localhost:8000/api/projects/8f1ec8c8-0e45-4349-ace5-b6c8781fbd11/dataparser-transforms",
         "video_url": "http://localhost:8000/uploads/4b88fa03-f301-4bdb-9cfa-ee6d452dd4fe.mp4"
     }
 ]

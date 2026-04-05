@@ -12,6 +12,9 @@ export interface Project {
     img: string;
     splat_url: string;
     transforms_url: string;
+    dataparser_transforms_url?: string;
+    video_url?: string;
+    cameras_url?: string;
 }
 
 export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> = ({ onOpenProject }) => {

@@ -1,0 +1,42 @@
+import React, { useEffect, useRef } from 'react';
+import { useStore } from '../../store';
+
+interface VideoBackgroundProps {
+  url?: string;
+  visible: boolean;
+}
+
+export const VideoBackground: React.FC<VideoBackgroundProps> = ({ url, visible }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const { currentFrame, isPlaying, totalFrames } = useStore();
+
+  useEffect(() => {
+    if (!videoRef.current || totalFrames === 0) return;
+    
+    const targetTime = currentFrame / 24;
+    if (Math.abs(videoRef.current.currentTime - targetTime) > 0.05) {
+        videoRef.current.currentTime = targetTime;
+    }
+
+    if (isPlaying && videoRef.current.paused) {
+      videoRef.current.play().catch(() => {});
+    } else if (!isPlaying && !videoRef.current.paused) {
+      videoRef.current.pause();
+    }
+  }, [currentFrame, isPlaying, totalFrames]);
+
+  if (!url) return null;
+
+  return (
+    <div className={`absolute inset-0 z-20 pointer-events-none flex items-center justify-center transition-opacity duration-300 ${visible ? 'opacity-100' : 'opacity-0'}`}>
+      <video
+        ref={videoRef}
+        src={url}
+        className="w-full h-full object-contain opacity-30"
+        crossOrigin="anonymous"
+        muted 
+        playsInline
+      />
+    </div>
+  );
+};
