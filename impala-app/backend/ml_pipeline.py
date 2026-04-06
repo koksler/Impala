@@ -35,7 +35,7 @@ def run_nerfstudio_pipeline(video_path: str, project_id: str, progress_callback=
         ns_process_exe, "video",
         "--data", video_path,
         "--output-dir", processed_dir,
-        "--num-frames-target", "150" 
+        "--num-frames-target", "1000" 
     ]
     
     try:
