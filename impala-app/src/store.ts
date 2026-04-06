@@ -34,6 +34,55 @@ interface AppState {
     showGrid: boolean;
     showSplat: boolean;
     toggleVisibility: (key: 'showVideo' | 'showModels' | 'showGrid' | 'showSplat') => void;
+
+    videoDimensions: { width: number; height: number } | null;
+    setVideoDimensions: (width: number, height: number) => void;
+
+    // Tool Mode
+    activeTool: string;
+    setActiveTool: (tool: string) => void;
+    snapToGrid: boolean;
+    setSnapToGrid: (val: boolean) => void;
+    isCropping: boolean;
+    setIsCropping: (val: boolean) => void;
+
+    splatViewer: any | null;
+    setSplatViewer: (viewer: any) => void;
+
+    cropBox: {
+        position: [number, number, number];
+        rotation: [number, number, number];
+        scale: [number, number, number];
+    };
+    setCropBox: (transform: Partial<{ position: [number, number, number], rotation: [number, number, number], scale: [number, number, number] }>) => void;
+
+    // Object Transform
+    objPos: [number, number, number];
+    objRot: [number, number, number];
+    objScale: [number, number, number];
+    setObjPos: (pos: [number, number, number]) => void;
+    setObjRot: (rot: [number, number, number]) => void;
+    setObjScale: (scale: [number, number, number]) => void;
+
+    // Material/Shadows
+    shadowOpacity: number;
+    shadowBlur: number;
+    shadowColor: string;
+    matRoughness: number;
+    matMetallic: number;
+    setShadowOpacity: (val: number) => void;
+    setShadowBlur: (val: number) => void;
+    setShadowColor: (val: string) => void;
+    setMatRoughness: (val: number) => void;
+    setMatMetallic: (val: number) => void;
+
+    // Environment
+    envIntensity: number;
+    envRotation: number;
+    envTint: string;
+    setEnvIntensity: (val: number) => void;
+    setEnvRotation: (val: number) => void;
+    setEnvTint: (val: string) => void;
 }
 
 interface CameraFrame {
@@ -75,6 +124,51 @@ export const useStore = create<AppState>((set) => ({
     showSplat: true,
     cameraFov: 45,
     toggleVisibility: (key) => set((state) => ({ [key]: !state[key] })),
+
+    videoDimensions: null,
+    setVideoDimensions: (width, height) => set({ videoDimensions: { width, height } }),
+
+    activeTool: 'hand',
+    setActiveTool: (activeTool) => set({ activeTool }),
+    snapToGrid: false,
+    setSnapToGrid: (snapToGrid) => set({ snapToGrid }),
+    isCropping: false,
+    setIsCropping: (isCropping) => set({ isCropping }),
+
+    splatViewer: null,
+    setSplatViewer: (splatViewer) => set({ splatViewer }),
+
+    cropBox: {
+        position: [0, 0, 0],
+        rotation: [0, 0, 0],
+        scale: [2, 2, 2],
+    },
+    setCropBox: (transform) => set((state) => ({ cropBox: { ...state.cropBox, ...transform } })),
+
+    objPos: [0, 0.5, 0],
+    objRot: [0, 0, 0],
+    objScale: [1, 1, 1],
+    setObjPos: (objPos) => set({ objPos }),
+    setObjRot: (objRot) => set({ objRot }),
+    setObjScale: (objScale) => set({ objScale }),
+
+    shadowOpacity: 0.4,
+    shadowBlur: 0.5,
+    shadowColor: '#313133',
+    matRoughness: 0.2,
+    matMetallic: 0.8,
+    setShadowOpacity: (shadowOpacity) => set({ shadowOpacity }),
+    setShadowBlur: (shadowBlur) => set({ shadowBlur }),
+    setShadowColor: (shadowColor) => set({ shadowColor }),
+    setMatRoughness: (matRoughness) => set({ matRoughness }),
+    setMatMetallic: (matMetallic) => set({ matMetallic }),
+
+    envIntensity: 1,
+    envRotation: 0,
+    envTint: '#ffffff',
+    setEnvIntensity: (envIntensity) => set({ envIntensity }),
+    setEnvRotation: (envRotation) => set({ envRotation }),
+    setEnvTint: (envTint) => set({ envTint }),
 
     setPlaying: (isPlaying) => set({ isPlaying }),
     setCurrentFrame: (currentFrame) => set({ currentFrame }),

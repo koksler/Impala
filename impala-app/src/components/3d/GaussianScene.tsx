@@ -12,7 +12,7 @@ export const GaussianScene: React.FC<GaussianSceneProps> = ({ url, visible }) =>
   const groupRef = useRef<THREE.Group>(null);
   const viewerRef = useRef<any>(null);
   
-  const { splatLocation, splatRotation, splatScale } = useStore(); // Backlog
+  const { setSplatViewer } = useStore(); // Backlog
 
   useEffect(() => {
     if (!url || !groupRef.current) return;
@@ -26,10 +26,12 @@ export const GaussianScene: React.FC<GaussianSceneProps> = ({ url, visible }) =>
     viewer.addSplatScene(url, { showLoadingUI: false });
     groupRef.current.add(viewer);
     viewerRef.current = viewer;
+    setSplatViewer(viewer);
 
     return () => {
       if (groupRef.current) groupRef.current.clear();
       viewerRef.current = null;
+      setSplatViewer(null);
     };
   },[url]);
 

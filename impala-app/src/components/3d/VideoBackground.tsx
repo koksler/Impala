@@ -12,10 +12,17 @@ export const VideoBackground: React.FC<VideoBackgroundProps> = ({ url, visible }
 
   useEffect(() => {
     if (!videoRef.current || totalFrames === 0) return;
+        
+    const duration = videoRef.current.duration;
     
-    const targetTime = currentFrame / 24;
-    if (Math.abs(videoRef.current.currentTime - targetTime) > 0.05) {
-        videoRef.current.currentTime = targetTime;
+    if (duration > 0) {
+
+        const progress = currentFrame / (totalFrames - 1);
+        const targetTime = progress * duration;
+
+        if (Math.abs(videoRef.current.currentTime - targetTime) > 0.03) {
+            videoRef.current.currentTime = targetTime;
+        }
     }
 
     if (isPlaying && videoRef.current.paused) {

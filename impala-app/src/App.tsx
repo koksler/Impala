@@ -8,13 +8,50 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState<'home' | 'project'>('home');
   const [activeProject, setActiveProject] = useState<Project | null>(null);
 
-  const { serverStatus, checkServerStatus, setCameraData, setDataparserTransform } = useStore();
+  const { serverStatus, checkServerStatus, setCameraData, setVideoDimensions, setActiveTool, setIsCropping } = useStore();
 
   useEffect(() => {
     checkServerStatus();
     const id = setInterval(checkServerStatus, 5000);
     return () => clearInterval(id);
   }, [checkServerStatus]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+      const ctrl = e.ctrlKey || e.metaKey;
+      
+      // Prevent default browser shortcuts for our global ones
+      if (ctrl && e.key.toLowerCase() === 'z') {
+         e.preventDefault();
+         console.log(e.shiftKey ? "Redo triggered" : "Undo triggered");
+         return;
+      }
+      
+      if (ctrl && e.key.toLowerCase() === 's') {
+         e.preventDefault();
+         console.log("Save triggered");
+         return;
+      }
+
+      if (!ctrl && !e.altKey && !e.shiftKey) {
+        switch (e.key.toLowerCase()) {
+          case 'h': setActiveTool('hand'); break;
+          case 'g': setActiveTool('translate'); break;
+          case 'r': setActiveTool('rotate'); break;
+          case 's': setActiveTool('scale'); break;
+          case 'b': setActiveTool('brush'); break;
+          case 'e': setActiveTool('eraser'); break;
+          case 'c': setIsCropping(!useStore.getState().isCropping); break;
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [setActiveTool]);
 
   const handleOpenProject = (project: Project) => {
     setActiveProject(project);
@@ -45,6 +82,11 @@ export default function App() {
             }
 
             setCameraData(frames, fov);
+            
+            const w = data.w || first.w || 1920;
+            const h = data.h || first.h || 1080;
+            setVideoDimensions(w, h);
+            
             console.log(`Loaded ${frames.length} frames. FOV: ${fov.toFixed(2)}`);
         } else {
             console.error("[ERROR] Couldn't find cameras array");

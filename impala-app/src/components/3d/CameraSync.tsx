@@ -9,7 +9,7 @@ export const CameraSync = () => {
     const { camera } = useThree();
     const {
       cameraData, currentFrame, isPlaying, cameraEnabled,
-      setCurrentFrame, totalFrames, cameraFov
+      setCurrentFrame, totalFrames, cameraFov, videoDimensions
     } = useStore();
     const clockRef = useRef(0);
   
@@ -50,8 +50,16 @@ export const CameraSync = () => {
         camera.matrixAutoUpdate = false;
         camera.matrix.copy(finalMatrix);
         camera.matrixWorldNeedsUpdate = true;
+        
+        if (videoDimensions) {
+            const aspect = videoDimensions.width / videoDimensions.height;
+            if ((camera as THREE.PerspectiveCamera).aspect !== aspect) {
+                (camera as THREE.PerspectiveCamera).aspect = aspect;
+                (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
+            }
+        }
     
-      }, [currentFrame, cameraData, camera, cameraEnabled, cameraFov]);
+      }, [currentFrame, cameraData, camera, cameraEnabled, cameraFov, videoDimensions]);
   
     return null;
 };
