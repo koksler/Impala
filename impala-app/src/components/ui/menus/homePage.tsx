@@ -4,6 +4,7 @@ import { SearchBar } from '../inputs/searchBar';
 import { ProjectCard } from './projectCard';
 import { Button } from '../buttons/buttons';
 import { UploadModal } from './uploadModal';
+import { Tooltip } from '../Tooltip';
 
 export interface Project {
     id: string;
@@ -68,12 +69,16 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
                     imageSrc="/banners/coil.png"
                     buttons={
                         <>
-                            <Button variant="accent" onClick={() => setIsModalOpen(true)}>
-                                Load an image or a video
-                            </Button>
-                            <Button variant="menu-misc">
-                                Link an external asset
-                            </Button>
+                            <Tooltip content="Upload media file" position="top">
+                                <Button variant="accent" onClick={() => setIsModalOpen(true)}>
+                                    Load an image or a video
+                                </Button>
+                            </Tooltip>
+                            <Tooltip content="Provide URL or external link" position="top">
+                                <Button variant="menu-misc">
+                                    Link an external asset
+                                </Button>
+                            </Tooltip>
                         </>
                     }
                 />
@@ -85,9 +90,11 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
                     subtitle="A new project with the prerendered scene will be created."
                     imageSrc="/banners/abstract.png"
                     buttons={
-                        <Button variant="accent">
-                            Load a gaussian splatting scene
-                        </Button>
+                        <Tooltip content="Upload .ply file" position="top">
+                            <Button variant="accent">
+                                Load a gaussian splatting scene
+                            </Button>
+                        </Tooltip>
                     }
                 />
             </div>

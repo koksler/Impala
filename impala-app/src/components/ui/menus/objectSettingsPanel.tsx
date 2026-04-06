@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Panel } from '../panel';
 import { Divider } from '../divider';
 import { SectionHeader } from '../sectionHeader';
@@ -7,6 +7,8 @@ import { Vector3Input } from '../inputs/vector3Input';
 import { Slider } from '../inputs/slider';
 import { ColorPicker } from '../inputs/colorPicker';
 import { Button } from '../buttons/buttons';
+import { Tooltip } from '../Tooltip';
+import { useStore } from '../../../store';
 
 import {
     LocateIcon,
@@ -25,17 +27,16 @@ interface ObjectSettingsPanelProps {
 
 export const ObjectSettingsPanel: React.FC<ObjectSettingsPanelProps> = ({isMinimized, onToggleMinimize}) => {
 
-    // Transformation States
-    const [location, setLocation] = useState({ x: 0, y: 0, z: 0 });
-    const [rotation, setRotation] = useState({ x: 0, y: 0, z: 0 });
-    const [scale, setScale] = useState({ x: 0, y: 0, z: 0 });
-
-    // Shadow and Material States
-    const [opacity, setOpacity] = useState(0.5);
-    const [blur, setBlur] = useState(0.5);
-    const [color, setColor] = useState('#313133');
-    const [roughness, setRoughness] = useState(0.5);
-    const [metallic, setMetallic] = useState(0.5);
+    const { 
+        objPos, setObjPos,
+        objRot, setObjRot,
+        objScale, setObjScale,
+        shadowOpacity, setShadowOpacity,
+        shadowBlur, setShadowBlur,
+        shadowColor, setShadowColor,
+        matRoughness, setMatRoughness,
+        matMetallic, setMatMetallic
+    } = useStore();
 
     return (
         <Panel className={isMinimized ? "h-fit w-[280px]" : "h-full flex flex-col w-[280px]"}>
@@ -44,13 +45,15 @@ export const ObjectSettingsPanel: React.FC<ObjectSettingsPanelProps> = ({isMinim
                 <h1 className="font-sans font-bold text-[16px] text-text-accent m-0 tracking-wide">
                     3D Object Settings
                 </h1>
-                <Button 
-                    variant="toggle" 
-                    onClick={onToggleMinimize}
-                    aria-label={isMinimized ? "Maximize panel" : "Minimize panel"}
-                >
-                    {isMinimized ? <MaximizeIcon className="w-5 h-5" /> : <MinimizeIcon className="w-5 h-5" />}
-                </Button>
+                <Tooltip content={isMinimized ? "Maximize panel" : "Minimize panel"} position="left">
+                    <Button 
+                        variant="toggle" 
+                        onClick={onToggleMinimize}
+                        aria-label={isMinimized ? "Maximize panel" : "Minimize panel"}
+                    >
+                        {isMinimized ? <MaximizeIcon className="w-5 h-5" /> : <MinimizeIcon className="w-5 h-5" />}
+                    </Button>
+                </Tooltip>
             </div>
 
             {/* Stuff that collapses on minimize */}
@@ -72,26 +75,47 @@ export const ObjectSettingsPanel: React.FC<ObjectSettingsPanelProps> = ({isMinim
                         <Vector3Input 
                             label="Location" 
                             icon={<LocateIcon />} 
-                            {...location} 
-                            onChange={setLocation} 
+                            x={objPos[0]} y={objPos[1]} z={objPos[2]}
+                            onChange={(v) => setObjPos([v.x, v.y, v.z])} 
                         />
                         <Vector3Input 
                             label="Rotation" 
                             icon={<RotateIcon />} 
-                            {...rotation} 
-                            onChange={setRotation} 
+                            x={objRot[0]} y={objRot[1]} z={objRot[2]}
+                            onChange={(v) => setObjRot([v.x, v.y, v.z])} 
                         />
                         <Vector3Input 
                             label="Scale" 
                             icon={<ScaleIcon />} 
-                            {...scale} 
-                            onChange={setScale} 
+                            x={objScale[0]} y={objScale[1]} z={objScale[2]}
+                            onChange={(v) => setObjScale([v.x, v.y, v.z])} 
                         />
                     </div>
 
                     <div className="flex flex-col gap-[8px] px-[12px] mt-[15px]">
-                        <Button variant="full">Reset Transform</Button>
-                        <Button variant="full">Snap to Floor</Button>
+                        <Tooltip content="Reset to original transform" position="top">
+                            <Button 
+                                variant="full"
+                                onClick={() => {
+                                    setObjPos([0, 0.5, 0]);
+                                    setObjRot([0, 0, 0]);
+                                    setObjScale([1, 1, 1]);
+                                }}
+                            >
+                                Reset Transform
+                            </Button>
+                        </Tooltip>
+                        <Tooltip content="Move object to floor level" position="top">
+                            <Button 
+                                variant="full"
+                                onClick={() => {
+                                    // Set floor level as 0.5, assuming 1x1x1 box centered
+                                    setObjPos([objPos[0], 0.5, objPos[2]]);
+                                }}
+                            >
+                                Snap to Floor
+                            </Button>
+                        </Tooltip>
                     </div>
 
                     <Divider />
@@ -105,9 +129,9 @@ export const ObjectSettingsPanel: React.FC<ObjectSettingsPanelProps> = ({isMinim
                     </div>
 
                     <div className="flex flex-col gap-[10px] px-[12px]">
-                        <Slider label="Opacity" value={opacity} onChange={setOpacity} />
-                        <Slider label="Blur" value={blur} onChange={setBlur} />
-                        <ColorPicker color={color} onChange={setColor} />
+                        <Slider label="Opacity" value={shadowOpacity} onChange={setShadowOpacity} />
+                        <Slider label="Blur" value={shadowBlur} onChange={setShadowBlur} />
+                        <ColorPicker color={shadowColor} onChange={setShadowColor} />
                     </div>
 
                     <div className="flex items-center gap-[6px] px-[12px] mt-[20px] mb-[10px]">
@@ -116,8 +140,8 @@ export const ObjectSettingsPanel: React.FC<ObjectSettingsPanelProps> = ({isMinim
                     </div>
 
                     <div className="flex flex-col gap-[10px] px-[12px]">
-                        <Slider label="Roughness" value={roughness} onChange={setRoughness} />
-                        <Slider label="Metallic" value={metallic} onChange={setMetallic} />
+                        <Slider label="Roughness" value={matRoughness} onChange={setMatRoughness} />
+                        <Slider label="Metallic" value={matMetallic} onChange={setMatMetallic} />
                     </div>
 
                     <Divider />

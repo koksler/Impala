@@ -8,6 +8,7 @@ import {
   OptionsIcon,
   ImpalaLogoIcon
 } from './icons/index';
+import { Tooltip } from './ui/Tooltip';
 
 interface HeaderProps {
     variant?: 'project' | 'home';
@@ -54,31 +55,43 @@ export const Header: React.FC<HeaderProps> = ({
                 {variant === 'project' && (
                     <>
                         {/* Thats History Controls */}
-                        <Button variant="icon">
-                            <UndoIcon className="w-6 h-6" />
-                        </Button>
-                        <Button variant="icon">
-                            <RedoIcon className="w-6 h-6" />
-                        </Button>
+                        <Tooltip content="Undo" hotkey="Ctrl+Z" position="bottom">
+                            <Button variant="icon">
+                                <UndoIcon className="w-6 h-6" />
+                            </Button>
+                        </Tooltip>
+                        <Tooltip content="Redo" hotkey="Ctrl+Shift+Z" position="bottom">
+                            <Button variant="icon">
+                                <RedoIcon className="w-6 h-6" />
+                            </Button>
+                        </Tooltip>
 
                         {/* Export Action */}
-                        <Button variant="accent">
-                            Export
-                        </Button>
+                        <Tooltip content="Export Project" position="bottom">
+                            <Button variant="accent">
+                                Export
+                            </Button>
+                        </Tooltip>
 
                         {/* Document Controls */}
-                        <Button variant="icon">
-                            <SaveIcon className="w-6 h-6" />
-                        </Button>
-                        <Button variant="icon" onClick={onGoHome}>
-                            <HomeIcon className="w-6 h-6" />
-                        </Button>
+                        <Tooltip content="Save Project" hotkey="Ctrl+S" position="bottom">
+                            <Button variant="icon">
+                                <SaveIcon className="w-6 h-6" />
+                            </Button>
+                        </Tooltip>
+                        <Tooltip content="Home Page" position="bottom">
+                            <Button variant="icon" onClick={onGoHome}>
+                                <HomeIcon className="w-6 h-6" />
+                            </Button>
+                        </Tooltip>
                     </>
                 )}
 
-                <Button variant="icon">
-                    <OptionsIcon className="w-6 h-6" />
-                </Button>
+                <Tooltip content="Settings" position="bottom">
+                    <Button variant="icon">
+                        <OptionsIcon className="w-6 h-6" />
+                    </Button>
+                </Tooltip>
             </div>
         </header>
     );

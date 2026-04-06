@@ -6,7 +6,9 @@ import { ValueInputRow } from '../inputs/valueInputRow';
 import { ColorPicker } from '../inputs/colorPicker';
 import { ProgressBar } from '../progressBar';
 import { Button } from '../buttons/buttons';
-import { Slider } from '../inputs/slider'
+import { Slider } from '../inputs/slider';
+import { Tooltip } from '../Tooltip';
+import { useStore } from '../../../store';
  
 import {
     LightbulbIcon,
@@ -19,10 +21,7 @@ interface SceneSettingsPanelProps {
 }
 
 export const SceneSettingsPanel: React.FC<SceneSettingsPanelProps> = ({ isMinimized }) => {
-    const [intensity, setIntensity] = useState(0.5);
-    const [rotation, setRotation] = useState(0);
-    const [tintColor, setTintColor] = useState<string>('#FFFFFF');
-
+    const { envIntensity, setEnvIntensity, envRotation, setEnvRotation, envTint, setEnvTint } = useStore();
     const [bakeProgress, setBakeProgress] = useState<number>(35); 
 
     return (
@@ -45,8 +44,8 @@ export const SceneSettingsPanel: React.FC<SceneSettingsPanelProps> = ({ isMinimi
                     <div className="flex items-center gap-[10px]">
                         <Slider 
                             label="Environment Intensity" 
-                            value={intensity} 
-                            onChange={setIntensity} 
+                            value={envIntensity} 
+                            onChange={setEnvIntensity} 
                             className="flex-1"
                         />
                         <LightbulbIcon className="w-5 h-5 text-text-main shrink-0" />
@@ -55,9 +54,9 @@ export const SceneSettingsPanel: React.FC<SceneSettingsPanelProps> = ({ isMinimi
                     <div className="flex items-center gap-[10px]">
                         <ValueInputRow 
                             label="Environment Rotation" 
-                            value={rotation}
+                            value={envRotation}
                             unit="deg" 
-                            onChange={setRotation} 
+                            onChange={(val) => setEnvRotation(Number(val))} 
                             className="flex-1"
                         />
                         <PlanetIcon className="w-5 h-5 text-text-main shrink-0" />
@@ -70,11 +69,13 @@ export const SceneSettingsPanel: React.FC<SceneSettingsPanelProps> = ({ isMinimi
                 </div>
 
                 <div className="px-[12px]">
-                    <ColorPicker color={tintColor} onChange={setTintColor} />
+                    <ColorPicker color={envTint} onChange={setEnvTint} />
                 </div>
 
                 <div className="px-[12px] mt-[15px]">
-                    <Button variant="full">Reset Environment</Button>
+                    <Tooltip content="Revert to default environment" position="top">
+                        <Button variant="full">Reset Environment</Button>
+                    </Tooltip>
                 </div>
 
                 <Divider />
@@ -90,8 +91,12 @@ export const SceneSettingsPanel: React.FC<SceneSettingsPanelProps> = ({ isMinimi
                 </div>
 
                 <div className="flex flex-col gap-[8px] px-[12px] mt-[15px]">
-                    <Button variant="full">Bake with current settings</Button>
-                    <Button variant="full">Regenerate environment</Button>
+                    <Tooltip content="Apply and bake changes" position="top">
+                        <Button variant="full">Bake with current settings</Button>
+                    </Tooltip>
+                    <Tooltip content="Generate a new environment map" position="top">
+                        <Button variant="full">Regenerate environment</Button>
+                    </Tooltip>
                 </div>
             </div>
             )}
