@@ -8,9 +8,12 @@ interface VideoBackgroundProps {
 
 export const VideoBackground: React.FC<VideoBackgroundProps> = ({ url, visible }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const { currentFrame, isPlaying, totalFrames } = useStore();
+  const { currentFrame, isPlaying, totalFrames, setVideoElement } = useStore();
 
   useEffect(() => {
+    if (videoRef.current) {
+        setVideoElement(videoRef.current);
+    }
     if (!videoRef.current || totalFrames === 0) return;
         
     const duration = videoRef.current.duration;

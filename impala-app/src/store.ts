@@ -41,6 +41,10 @@ interface AppState {
     // Tool Mode
     activeTool: string;
     setActiveTool: (tool: string) => void;
+    
+    videoElement: HTMLVideoElement | null;
+    setVideoElement: (el: HTMLVideoElement | null) => void;
+
     snapToGrid: boolean;
     setSnapToGrid: (val: boolean) => void;
     isCropping: boolean;
@@ -88,6 +92,13 @@ interface AppState {
     setEnvIntensity: (val: number) => void;
     setEnvRotation: (val: number) => void;
     setEnvTint: (val: string) => void;
+
+    bakedEnvTexture: import('three').Texture | null;
+    setBakedEnvTexture: (texture: import('three').Texture | null) => void;
+    bakedEnvPreview: string | null;
+    setBakedEnvPreview: (preview: string | null) => void;
+    isBakingEnv: boolean;
+    setIsBakingEnv: (isBaking: boolean) => void;
 }
 
 interface CameraFrame {
@@ -135,6 +146,10 @@ export const useStore = create<AppState>((set) => ({
 
     activeTool: 'hand',
     setActiveTool: (activeTool) => set({ activeTool }),
+    
+    videoElement: null,
+    setVideoElement: (videoElement) => set({ videoElement }),
+
     snapToGrid: false,
     setSnapToGrid: (snapToGrid) => set({ snapToGrid }),
     isCropping: false,
@@ -179,6 +194,13 @@ export const useStore = create<AppState>((set) => ({
     setEnvIntensity: (envIntensity) => set({ envIntensity }),
     setEnvRotation: (envRotation) => set({ envRotation }),
     setEnvTint: (envTint) => set({ envTint }),
+
+    bakedEnvTexture: null,
+    setBakedEnvTexture: (bakedEnvTexture) => set({ bakedEnvTexture }),
+    bakedEnvPreview: null,
+    setBakedEnvPreview: (bakedEnvPreview) => set({ bakedEnvPreview }),
+    isBakingEnv: false,
+    setIsBakingEnv: (isBakingEnv) => set({ isBakingEnv }),
 
     setPlaying: (isPlaying) => set({ isPlaying }),
     setCurrentFrame: (currentFrame) => set({ currentFrame }),

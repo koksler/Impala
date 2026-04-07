@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { CameraSync } from '../3d/CameraSync';
 import { CameraPath } from '../3d/CameraPath';
 import { CustomModel } from '../3d/CustomModel';
+import { EnvironmentBaker } from '../3d/EnvironmentBaker';
 
 export const EditorCanvas = ({ splatUrl }: { splatUrl?: string }) => {
   const { 
@@ -14,7 +15,8 @@ export const EditorCanvas = ({ splatUrl }: { splatUrl?: string }) => {
     activeTool, objPos, objRot, objScale, setObjPos, setObjRot, setObjScale,
     shadowOpacity, shadowBlur, shadowColor,
     envIntensity, envRotation, envTint, snapToGrid,
-    cropBox, setCropBox, isCropping, customModelUrl
+    cropBox, setCropBox, isCropping, customModelUrl,
+    bakedEnvTexture
   } = useStore();
   
   const [cube, setCube] = useState<THREE.Object3D | null>(null);
@@ -104,7 +106,12 @@ export const EditorCanvas = ({ splatUrl }: { splatUrl?: string }) => {
           </mesh>
         </group>
 
-        <Environment files="/hdri/potsdamer_platz_1k.hdr" environmentIntensity={envIntensity} environmentRotation={[0, envRotation * (Math.PI / 180), 0]} />
+        {bakedEnvTexture ? (
+             <Environment map={bakedEnvTexture} environmentIntensity={envIntensity} environmentRotation={[0, envRotation * (Math.PI / 180), 0]} />
+        ) : (
+             <Environment files="/hdri/potsdamer_platz_1k.hdr" environmentIntensity={envIntensity} environmentRotation={[0, envRotation * (Math.PI / 180), 0]} />
+        )}
+        <EnvironmentBaker />
       </Suspense>
 
       <CameraSync />
