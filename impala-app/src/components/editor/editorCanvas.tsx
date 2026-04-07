@@ -64,9 +64,9 @@ export const EditorCanvas = ({ splatUrl }: { splatUrl?: string }) => {
           
           {isCropping && (
             <>
-              <mesh ref={setCropCube} position={cropBox.position} rotation={cropBox.rotation} scale={cropBox.scale}>
+              <mesh ref={setCropCube} position={cropBox.position} rotation={cropBox.rotation} scale={cropBox.scale} renderOrder={999}>
                 <boxGeometry args={[1, 1, 1]} />
-                <meshBasicMaterial color="#FF3B3B" wireframe transparent opacity={0.3} depthWrite={false} />
+                <meshBasicMaterial color="#FF3B3B" wireframe transparent opacity={0.5} depthWrite={false} depthTest={false} />
               </mesh>
               {cropCube && (activeTool === 'translate' || activeTool === 'rotate' || activeTool === 'scale') && (
                 <TransformControls 

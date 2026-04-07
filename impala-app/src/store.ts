@@ -99,6 +99,11 @@ interface AppState {
     setBakedEnvPreview: (preview: string | null) => void;
     isBakingEnv: boolean;
     setIsBakingEnv: (isBaking: boolean) => void;
+
+    activeProjectId: string | null;
+    setActiveProjectId: (id: string | null) => void;
+    activeSplatUrl: string | null;
+    setActiveSplatUrl: (url: string | null) => void;
 }
 
 interface CameraFrame {
@@ -201,6 +206,11 @@ export const useStore = create<AppState>((set) => ({
     setBakedEnvPreview: (bakedEnvPreview) => set({ bakedEnvPreview }),
     isBakingEnv: false,
     setIsBakingEnv: (isBakingEnv) => set({ isBakingEnv }),
+
+    activeProjectId: null,
+    setActiveProjectId: (activeProjectId) => set({ activeProjectId }),
+    activeSplatUrl: null,
+    setActiveSplatUrl: (activeSplatUrl) => set({ activeSplatUrl }),
 
     setPlaying: (isPlaying) => set({ isPlaying }),
     setCurrentFrame: (currentFrame) => set({ currentFrame }),

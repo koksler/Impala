@@ -8,6 +8,9 @@ import json
 from datetime import datetime
 from ml_pipeline import run_nerfstudio_pipeline
 import glob
+import numpy as np
+from plyfile import PlyData, PlyElement
+from pydantic import BaseModel
 
 app = FastAPI(title="Impala Backend Core")
 
@@ -146,3 +149,53 @@ def get_project_cameras(project_id: str):
             return json.load(f)
             
     return {"error": "Camera data not found", "searched_path": path}
+
+class CropRequest(BaseModel):
+    inverse_matrix: list[float]
+
+@app.post("/api/projects/{project_id}/crop")
+async def crop_project(project_id: str, req: CropRequest):
+    input_ply = os.path.join(EXPORT_DIR, project_id, "splat.ply")
+    
+    # We always crop from the original splat.ply to prevent compounding/intersection of previously cropped slices.
+    existing_crops = glob.glob(os.path.join(EXPORT_DIR, project_id, "splat_cropped_*.ply"))
+        
+    random_id = uuid.uuid4().hex[:8]
+    output_filename = f"splat_cropped_{random_id}.ply"
+    output_ply = os.path.join(EXPORT_DIR, project_id, output_filename)
+    
+    # Convert JS column-major 16-element array to 4x4 numpy matrix
+    inv_matrix = np.array(req.inverse_matrix).reshape(4, 4).T
+    
+    plydata = PlyData.read(input_ply)
+    v_data = plydata['vertex'].data
+    
+    # Extract positions
+    x = v_data['x']
+    y = v_data['y']
+    z = v_data['z']
+    
+    # Create 4xN matrix for multiplication (x, y, z, 1)
+    pts = np.vstack((x, y, z, np.ones_like(x)))
+    transformed_pts = inv_matrix @ pts
+    
+    # Check bounds (-0.5 to 0.5 in local crop space)
+    tx, ty, tz = transformed_pts[0, :], transformed_pts[1, :], transformed_pts[2, :]
+    mask = (tx >= -0.5) & (tx <= 0.5) & (ty >= -0.5) & (ty <= 0.5) & (tz >= -0.5) & (tz <= 0.5)
+    
+    # Filter and save
+    new_v_data = v_data[mask]
+    new_plydata = PlyData([PlyElement.describe(new_v_data, 'vertex')], text=False)
+    new_plydata.write(output_ply)
+    
+    # Clean up old crops
+    for old_crop in existing_crops:
+        try:
+            os.remove(old_crop)
+        except OSError:
+            pass
+            
+    return {
+       "status": "success", 
+       "new_url": f"http://localhost:8000/exports/{project_id}/{output_filename}"
+    }

@@ -8,7 +8,7 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState<'home' | 'project'>('home');
   const [activeProject, setActiveProject] = useState<Project | null>(null);
 
-  const { serverStatus, checkServerStatus, setCameraData, setVideoDimensions, setActiveTool, setIsCropping } = useStore();
+  const { serverStatus, checkServerStatus, setCameraData, setVideoDimensions, setActiveTool, setIsCropping, activeSplatUrl } = useStore();
 
   useEffect(() => {
     checkServerStatus();
@@ -62,6 +62,8 @@ export default function App() {
   const handleOpenProject = (project: Project) => {
     setActiveProject(project);
     setCurrentPage('project');
+    useStore.getState().setActiveProjectId(project.id);
+    useStore.getState().setActiveSplatUrl(project.splat_url);
 
     const camerasUrl = project.cameras_url || `http://localhost:8000/api/projects/${project.id}/cameras`;
 
@@ -117,7 +119,7 @@ export default function App() {
       ) : (
         <EditorView 
           videoUrl={activeProject?.video_url} 
-          splatUrl={activeProject?.splat_url} 
+          splatUrl={activeSplatUrl || activeProject?.splat_url} 
         />
       )}
     </div>

@@ -17,129 +17,74 @@ import * as THREE from 'three';
 
 export const FloatingToolbar: React.FC = () => {
     const { activeTool, setActiveTool, snapToGrid, setSnapToGrid, isCropping, setIsCropping } = useStore();
+    const [isProcessingCrop, setIsProcessingCrop] = React.useState(false);
 
-    const handleApplyCrop = () => {
-        const viewer = useStore.getState().splatViewer;
-        const cropBox = useStore.getState().cropBox;
-    
-        if (!viewer) return;
-        const meshes: any[] = viewer.splatMeshes ?? (viewer.splatMesh ? [viewer.splatMesh] : []);
-        if (meshes.length === 0) return;
-    
-        // Считаем полуширину куба
-        const [scaleX, scaleY, scaleZ] = cropBox.scale;
-        const hx = scaleX / 2;
-        const hy = scaleY / 2;
-        const hz = scaleZ / 2;
-    
-        // Строим матрицу перевода из World Space в Local Space куба
-        const euler = new THREE.Euler(...cropBox.rotation);
-        const cropRotTrans = new THREE.Matrix4().compose(
-            new THREE.Vector3(...cropBox.position),
-            new THREE.Quaternion().setFromEuler(euler),
-            new THREE.Vector3(1, 1, 1)
-        );
-        const inverseCropRotTrans = cropRotTrans.clone().invert();
-    
-        let totalDeleted = 0;
-    
-        for (const mesh of meshes) {
-            mesh.updateMatrixWorld(true);
-            const worldToCropLocal = inverseCropRotTrans.clone().multiply(mesh.matrixWorld);
-    
-            const splatCount: number = mesh.getSplatCount();
-            const center = new THREE.Vector3();
+    const handleApplyCrop = async () => {
+        const { cropBox, activeProjectId, setActiveSplatUrl } = useStore.getState();
+
+        if (!activeProjectId) {
+            console.error("Cannot crop: No active project ID.");
+            return;
+        }
+
+        setIsProcessingCrop(true);
+
+        try {
+            // The crop box is rendered inside a <group position={[0, -1.5, 0]}> in EditorCanvas
+            const parentGroupMatrix = new THREE.Matrix4().makeTranslation(0, -1.5, 0);
+            const cropLocalMatrix = new THREE.Matrix4().compose(
+                new THREE.Vector3(...cropBox.position),
+                new THREE.Quaternion().setFromEuler(new THREE.Euler(...cropBox.rotation)),
+                new THREE.Vector3(...cropBox.scale)
+            );
+            const cropWorldMatrix = parentGroupMatrix.multiply(cropLocalMatrix);
+            const inverseCropWorldMatrix = cropWorldMatrix.invert();
+
+            // Find the splat world matrix
+            const splatViewer = useStore.getState().splatViewer;
+            const splatWorldMatrix = new THREE.Matrix4();
             
-            // Получаем доступ к низкоуровневому бинарному буферу
-            const splatBuffer = mesh.scenes?.[0]?.splatBuffer || mesh.splatBuffer || 
-                                (typeof mesh.getSplatBufferForSplat === 'function' ? mesh.getSplatBufferForSplat(0) : null);
-            let SplatBufferClass: any = null;
-            if (splatBuffer) {
-                SplatBufferClass = splatBuffer.constructor;
-            }
-
-            for (let i = 0; i < splatCount; i++) {
-                mesh.getSplatCenter(i, center);
-    
-                // Применяем локальный трансформ чанка (если сцена собрана из кусков)
-                if (typeof mesh.getSceneTransformForSplat === 'function') {
-                    const sceneTransform = mesh.getSceneTransformForSplat(i);
-                    if (sceneTransform) center.applyMatrix4(sceneTransform);
+            if (splatViewer) {
+                const mesh = splatViewer.splatMeshes?.[0] || splatViewer.splatMesh;
+                if (mesh) {
+                    mesh.updateMatrixWorld(true);
+                    splatWorldMatrix.copy(mesh.matrixWorld);
+                } else {
+                    splatWorldMatrix.makeRotationX(-Math.PI / 2);
                 }
-    
-                // Переводим точку в систему координат нашего CropBox
-                center.applyMatrix4(worldToCropLocal);
-    
-                // Проверяем, вышла ли точка за границы
-                const isOutside =
-                    Math.abs(center.x) > hx ||
-                    Math.abs(center.y) > hy ||
-                    Math.abs(center.z) > hz;
-    
-                if (isOutside) {
-                    // 1. ОФИЦИАЛЬНЫЙ АПИ (Если доступно в нашем форке)
-                    if (typeof mesh.setSplatDeleted === 'function') {
-                        mesh.setSplatDeleted(i, true);
-                    }
-                    
-                    // 2. НИЗКОУРОВНЕВЫЙ МЕТОД (Запись 0 в альфа-канал ArrayBuffer)
-                    if (splatBuffer && splatBuffer.bufferData) {
-                        let sectionIndex = 0;
-                        if (splatBuffer.globalSplatIndexToSectionMap) {
-                            sectionIndex = splatBuffer.globalSplatIndexToSectionMap[i];
-                        } else if (typeof splatBuffer.globalSplatIndexToSectionIndex === 'function') {
-                            sectionIndex = splatBuffer.globalSplatIndexToSectionIndex(i);
-                        }
-                        
-                        const section = splatBuffer.sections ? splatBuffer.sections[sectionIndex] : null;
-                        if (section) {
-                            const localSplatIndex = i - (section.splatCountOffset || 0);
-                            
-                            // Определяем смещение цвета. В стандарте это 24 (12 bytes position + 12 bytes scale)
-                            let colorOffset = 24; 
-                            if (SplatBufferClass?.CompressionLevels && SplatBufferClass.CompressionLevels[splatBuffer.compressionLevel]) {
-                                colorOffset = SplatBufferClass.CompressionLevels[splatBuffer.compressionLevel].ColorOffsetBytes || 24;
-                            }
-
-                            const srcSplatColorsBase = (section.bytesPerSplat || 32) * localSplatIndex + colorOffset;
-                            
-                            // Читаем/пишем напрямую в ArrayBuffer по вычисленному смещению
-                            const splatColorsArray = new Uint8Array(splatBuffer.bufferData, section.dataBase + srcSplatColorsBase, 4);
-                            
-                            // Записываем 0 в Альфа-канал (offset 3), делая точку полностью прозрачной!
-                            splatColorsArray[3] = 0; 
-                        }
-                    }
-
-                    totalDeleted++;
-                }
+            } else {
+                splatWorldMatrix.makeRotationX(-Math.PI / 2);
             }
 
-            // 3. ПРИНУДИТЕЛЬНОЕ ОБНОВЛЕНИЕ GPU И СОРТИРОВЩИКА
-            // Подтягиваем изменения из splatBuffer в WebGL-текстуры
-            if (typeof mesh.refreshGPUDataFromSplatBuffers === 'function') {
-                mesh.refreshGPUDataFromSplatBuffers();
-            } else if (typeof mesh.updateSplatMesh === 'function') {
-                mesh.updateSplatMesh();
-            }
+            // We combine the matrices: P_local = Inverse(CropWorld) * SplatWorld * P_raw
+            const finalMatrix = inverseCropWorldMatrix.multiply(splatWorldMatrix);
 
-            // Перестраиваем Spatial Index / Maps, если поддерживается
-            if (typeof mesh.buildSplatIndexMaps === 'function') {
-                mesh.buildSplatIndexMaps([splatBuffer]);
+            const res = await fetch(`http://localhost:8000/api/projects/${activeProjectId}/crop`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    inverse_matrix: Array.from(finalMatrix.elements)
+                })
+            });
+
+            if (!res.ok) throw new Error("Failed to crop: Server returned error");
+            const data = await res.json();
+
+            if (data.status === 'success' && data.new_url) {
+                console.log("Crop successful, updating splat URL.");
+                setActiveSplatUrl(data.new_url);
+                setIsCropping(false);
             }
+        } catch (err) {
+            console.error('Crop failed.', err);
+        } finally {
+            setIsProcessingCrop(false);
         }
-        
-        // Сигнализируем вьюеру о необходимости рендера нового кадра
-        if (typeof viewer.forceRenderNextFrame === 'function') {
-            viewer.forceRenderNextFrame();
-        }
-    
-        console.log(`✅ Crop applied: ${totalDeleted} splats removed. GPU Buffers updated. Scene is intact!`);
     };
 
     const renderTool = (name: string, Icon: any) => {
         const isActive = name === 'snap' ? snapToGrid : name === 'crop' ? isCropping : activeTool === name;
-        
+
         let content = '';
         let hotkey = undefined;
         let position: 'top' | 'bottom' | 'left' | 'right' = 'top';
@@ -158,8 +103,8 @@ export const FloatingToolbar: React.FC = () => {
 
         return (
             <Tooltip content={content} hotkey={hotkey} position={position}>
-                <Button 
-                    variant="toggle" 
+                <Button
+                    variant="toggle"
                     onClick={() => {
                         if (name === 'snap') {
                             setSnapToGrid(!snapToGrid);
@@ -196,11 +141,12 @@ export const FloatingToolbar: React.FC = () => {
 
             {isCropping && (
                 <div className="flex items-center bg-bg p-[6px] rounded-[16px] border border-bg-border mb-3">
-                    <Button 
+                    <Button
                         onClick={handleApplyCrop}
                         variant="full"
+                        disabled={isProcessingCrop}
                     >
-                        Apply Crop
+                        {isProcessingCrop ? 'Cropping...' : 'Apply Crop'}
                     </Button>
                 </div>
             )}
