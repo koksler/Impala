@@ -6,17 +6,18 @@ import { useStore } from '../../store';
 import * as THREE from 'three';
 import { CameraSync } from '../3d/CameraSync';
 import { CameraPath } from '../3d/CameraPath';
+import { CustomModel } from '../3d/CustomModel';
 
 export const EditorCanvas = ({ splatUrl }: { splatUrl?: string }) => {
   const { 
     showModels, showGrid, showSplat, cameraEnabled, isPlaying,
     activeTool, objPos, objRot, objScale, setObjPos, setObjRot, setObjScale,
-    shadowOpacity, shadowBlur, shadowColor, matRoughness, matMetallic,
+    shadowOpacity, shadowBlur, shadowColor,
     envIntensity, envRotation, envTint, snapToGrid,
-    cropBox, setCropBox, isCropping
+    cropBox, setCropBox, isCropping, customModelUrl
   } = useStore();
   
-  const [cube, setCube] = useState<THREE.Mesh | null>(null);
+  const [cube, setCube] = useState<THREE.Object3D | null>(null);
   const [cropCube, setCropCube] = useState<THREE.Mesh | null>(null);
 
   return (
@@ -61,6 +62,10 @@ export const EditorCanvas = ({ splatUrl }: { splatUrl?: string }) => {
           
           {isCropping && (
             <>
+              <mesh ref={setCropCube} position={cropBox.position} rotation={cropBox.rotation} scale={cropBox.scale}>
+                <boxGeometry args={[1, 1, 1]} />
+                <meshBasicMaterial color="#FF3B3B" wireframe transparent opacity={0.3} depthWrite={false} />
+              </mesh>
               {cropCube && (activeTool === 'translate' || activeTool === 'rotate' || activeTool === 'scale') && (
                 <TransformControls 
                   object={cropCube}
@@ -79,10 +84,6 @@ export const EditorCanvas = ({ splatUrl }: { splatUrl?: string }) => {
                   }}
                 />
               )}
-              <mesh ref={setCropCube} position={cropBox.position} rotation={cropBox.rotation} scale={cropBox.scale}>
-                <boxGeometry args={[1, 1, 1]} />
-                <meshBasicMaterial color="#FF3B3B" wireframe transparent opacity={0.3} />
-              </mesh>
             </>
           )}
 
@@ -90,13 +91,10 @@ export const EditorCanvas = ({ splatUrl }: { splatUrl?: string }) => {
             <Grid infiniteGrid fadeDistance={50} sectionColor="#FF763B" cellColor="#666666" />
           )}
 
-          {showModels && (
-            <>
-              <mesh ref={setCube} position={objPos} rotation={objRot} scale={objScale} castShadow receiveShadow>
-                <boxGeometry args={[1, 1, 1]} />
-                <meshStandardMaterial color="#FF763B" roughness={matRoughness} metalness={matMetallic} />
-              </mesh>
-            </>
+          {showModels && customModelUrl && (
+            <group ref={setCube as any} position={objPos} rotation={objRot} scale={objScale}>
+              <CustomModel url={customModelUrl} />
+            </group>
           )}
 
           {/* Shadow Catcher */}

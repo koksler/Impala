@@ -19,7 +19,13 @@ export default function App() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+      if (
+          target.tagName === 'TEXTAREA' || 
+          (target as HTMLInputElement).isContentEditable || 
+          (target.tagName === 'INPUT' && /^(text|search|url|tel|email|password|number)$/i.test((target as HTMLInputElement).type))
+      ) {
+          return;
+      }
 
       const ctrl = e.ctrlKey || e.metaKey;
       

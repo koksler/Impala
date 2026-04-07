@@ -9,6 +9,7 @@ import { ColorPicker } from '../inputs/colorPicker';
 import { Button } from '../buttons/buttons';
 import { Tooltip } from '../Tooltip';
 import { useStore } from '../../../store';
+import { triggerModelImport } from '../../../utils/importModel';
 
 import {
     LocateIcon,
@@ -35,7 +36,10 @@ export const ObjectSettingsPanel: React.FC<ObjectSettingsPanelProps> = ({isMinim
         shadowBlur, setShadowBlur,
         shadowColor, setShadowColor,
         matRoughness, setMatRoughness,
-        matMetallic, setMatMetallic
+        matMetallic, setMatMetallic,
+        customModelName,
+        setCustomModelUrl,
+        setCustomModelName
     } = useStore();
 
     return (
@@ -62,9 +66,19 @@ export const ObjectSettingsPanel: React.FC<ObjectSettingsPanelProps> = ({isMinim
                     <Divider />
 
                     {/* Objects List */}
-                    <SectionHeader title="Objects in this project" onAdd={() => console.log('Add object')} />
+                    <SectionHeader title="Objects in this project" onAdd={triggerModelImport} />
                     <div className="mt-[10px]">
-                        <ObjectListItem name="Object_Name" extension=".fbx" />
+                        {customModelName ? (
+                            <ObjectListItem 
+                                name={customModelName.includes('.') ? customModelName.split('.').slice(0, -1).join('.') : customModelName} 
+                                extension={customModelName.includes('.') ? customModelName.slice(customModelName.lastIndexOf('.')) : '.glb'} 
+                                onSwap={triggerModelImport}
+                                onClose={() => {
+                                    setCustomModelUrl(null);
+                                    setCustomModelName(null);
+                                }}
+                            />
+                        ) : null}
                     </div>
 
                     <Divider />

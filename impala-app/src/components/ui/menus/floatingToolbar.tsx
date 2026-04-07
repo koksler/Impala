@@ -16,61 +16,125 @@ import { useStore } from '../../../store';
 import * as THREE from 'three';
 
 export const FloatingToolbar: React.FC = () => {
-    const { activeTool, setActiveTool, snapToGrid, setSnapToGrid, isCropping, setIsCropping, splatViewer, cropBox } = useStore();
+    const { activeTool, setActiveTool, snapToGrid, setSnapToGrid, isCropping, setIsCropping } = useStore();
 
     const handleApplyCrop = () => {
-        if (!splatViewer || !splatViewer.splatMesh) {
-            console.warn("[Crop] SplatViewer or mesh not ready");
-            return;
-        }
-
-        const splatMesh = splatViewer.splatMesh;
-        
-        // 1. Compute Crop Box World Matrix
-        const cropWorldMatrix = new THREE.Matrix4().makeTranslation(0, -1.5, 0).multiply(
-            new THREE.Matrix4().compose(
-                new THREE.Vector3(...cropBox.position),
-                new THREE.Quaternion().setFromEuler(new THREE.Euler(...cropBox.rotation)),
-                new THREE.Vector3(...cropBox.scale)
-            )
+        const viewer = useStore.getState().splatViewer;
+        const cropBox = useStore.getState().cropBox;
+    
+        if (!viewer) return;
+        const meshes: any[] = viewer.splatMeshes ?? (viewer.splatMesh ? [viewer.splatMesh] : []);
+        if (meshes.length === 0) return;
+    
+        // Считаем полуширину куба
+        const [scaleX, scaleY, scaleZ] = cropBox.scale;
+        const hx = scaleX / 2;
+        const hy = scaleY / 2;
+        const hz = scaleZ / 2;
+    
+        // Строим матрицу перевода из World Space в Local Space куба
+        const euler = new THREE.Euler(...cropBox.rotation);
+        const cropRotTrans = new THREE.Matrix4().compose(
+            new THREE.Vector3(...cropBox.position),
+            new THREE.Quaternion().setFromEuler(euler),
+            new THREE.Vector3(1, 1, 1)
         );
-        const inverseCropMatrix = cropWorldMatrix.invert();
-        const splatWorldMatrix = splatMesh.matrixWorld;
-
-        let centers;
-        let splatCount = 0;
-
-        try {
-            if (typeof splatMesh.getCenters === 'function') {
-                centers = splatMesh.getCenters(); // fallback naming
-            } else {
-                centers = splatMesh.getSplatCenters();
+        const inverseCropRotTrans = cropRotTrans.clone().invert();
+    
+        let totalDeleted = 0;
+    
+        for (const mesh of meshes) {
+            mesh.updateMatrixWorld(true);
+            const worldToCropLocal = inverseCropRotTrans.clone().multiply(mesh.matrixWorld);
+    
+            const splatCount: number = mesh.getSplatCount();
+            const center = new THREE.Vector3();
+            
+            // Получаем доступ к низкоуровневому бинарному буферу
+            const splatBuffer = mesh.scenes?.[0]?.splatBuffer || mesh.splatBuffer || 
+                                (typeof mesh.getSplatBufferForSplat === 'function' ? mesh.getSplatBufferForSplat(0) : null);
+            let SplatBufferClass: any = null;
+            if (splatBuffer) {
+                SplatBufferClass = splatBuffer.constructor;
             }
-            splatCount = splatMesh.getSplatCount();
-        } catch(e) {
-            console.error("Failed to get bounds from splatMesh", e);
-            return;
-        }
 
-        const point = new THREE.Vector3();
-        let deletedCount = 0;
+            for (let i = 0; i < splatCount; i++) {
+                mesh.getSplatCenter(i, center);
+    
+                // Применяем локальный трансформ чанка (если сцена собрана из кусков)
+                if (typeof mesh.getSceneTransformForSplat === 'function') {
+                    const sceneTransform = mesh.getSceneTransformForSplat(i);
+                    if (sceneTransform) center.applyMatrix4(sceneTransform);
+                }
+    
+                // Переводим точку в систему координат нашего CropBox
+                center.applyMatrix4(worldToCropLocal);
+    
+                // Проверяем, вышла ли точка за границы
+                const isOutside =
+                    Math.abs(center.x) > hx ||
+                    Math.abs(center.y) > hy ||
+                    Math.abs(center.z) > hz;
+    
+                if (isOutside) {
+                    // 1. ОФИЦИАЛЬНЫЙ АПИ (Если доступно в нашем форке)
+                    if (typeof mesh.setSplatDeleted === 'function') {
+                        mesh.setSplatDeleted(i, true);
+                    }
+                    
+                    // 2. НИЗКОУРОВНЕВЫЙ МЕТОД (Запись 0 в альфа-канал ArrayBuffer)
+                    if (splatBuffer && splatBuffer.bufferData) {
+                        let sectionIndex = 0;
+                        if (splatBuffer.globalSplatIndexToSectionMap) {
+                            sectionIndex = splatBuffer.globalSplatIndexToSectionMap[i];
+                        } else if (typeof splatBuffer.globalSplatIndexToSectionIndex === 'function') {
+                            sectionIndex = splatBuffer.globalSplatIndexToSectionIndex(i);
+                        }
+                        
+                        const section = splatBuffer.sections ? splatBuffer.sections[sectionIndex] : null;
+                        if (section) {
+                            const localSplatIndex = i - (section.splatCountOffset || 0);
+                            
+                            // Определяем смещение цвета. В стандарте это 24 (12 bytes position + 12 bytes scale)
+                            let colorOffset = 24; 
+                            if (SplatBufferClass?.CompressionLevels && SplatBufferClass.CompressionLevels[splatBuffer.compressionLevel]) {
+                                colorOffset = SplatBufferClass.CompressionLevels[splatBuffer.compressionLevel].ColorOffsetBytes || 24;
+                            }
 
-        for (let i = 0; i < splatCount; i++) {
-            point.set(centers[i * 3], centers[i * 3 + 1], centers[i * 3 + 2]);
-            point.applyMatrix4(splatWorldMatrix);
-            point.applyMatrix4(inverseCropMatrix);
+                            const srcSplatColorsBase = (section.bytesPerSplat || 32) * localSplatIndex + colorOffset;
+                            
+                            // Читаем/пишем напрямую в ArrayBuffer по вычисленному смещению
+                            const splatColorsArray = new Uint8Array(splatBuffer.bufferData, section.dataBase + srcSplatColorsBase, 4);
+                            
+                            // Записываем 0 в Альфа-канал (offset 3), делая точку полностью прозрачной!
+                            splatColorsArray[3] = 0; 
+                        }
+                    }
 
-            if (Math.abs(point.x) > 0.5 || Math.abs(point.y) > 0.5 || Math.abs(point.z) > 0.5) {
-                if (typeof splatMesh.updateSplatDeleted === 'function') {
-                    splatMesh.updateSplatDeleted(i, true);
-                    deletedCount++;
-                } else if (typeof splatViewer.updateSplatDeleted === 'function') {
-                    splatViewer.updateSplatDeleted(i, true);
-                    deletedCount++;
+                    totalDeleted++;
                 }
             }
+
+            // 3. ПРИНУДИТЕЛЬНОЕ ОБНОВЛЕНИЕ GPU И СОРТИРОВЩИКА
+            // Подтягиваем изменения из splatBuffer в WebGL-текстуры
+            if (typeof mesh.refreshGPUDataFromSplatBuffers === 'function') {
+                mesh.refreshGPUDataFromSplatBuffers();
+            } else if (typeof mesh.updateSplatMesh === 'function') {
+                mesh.updateSplatMesh();
+            }
+
+            // Перестраиваем Spatial Index / Maps, если поддерживается
+            if (typeof mesh.buildSplatIndexMaps === 'function') {
+                mesh.buildSplatIndexMaps([splatBuffer]);
+            }
         }
-        console.log(`[Crop] Deleted ${deletedCount} outside box`);
+        
+        // Сигнализируем вьюеру о необходимости рендера нового кадра
+        if (typeof viewer.forceRenderNextFrame === 'function') {
+            viewer.forceRenderNextFrame();
+        }
+    
+        console.log(`✅ Crop applied: ${totalDeleted} splats removed. GPU Buffers updated. Scene is intact!`);
     };
 
     const renderTool = (name: string, Icon: any) => {

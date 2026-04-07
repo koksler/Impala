@@ -1,5 +1,6 @@
 import React from 'react';
 import { useStore } from '../../../store';
+import { triggerModelImport } from '../../../utils/importModel';
 import { Panel } from '../panel';
 import { Button } from '../buttons/buttons';
 import { Tooltip } from '../Tooltip';
@@ -54,7 +55,7 @@ export const TimelinePanel: React.FC = () => {
                 <div className="w-[1px] h-[24px] bg-item-border mx-[4px] opacity-50"></div>
         
                 <Tooltip content="Import Assets" position="top">
-                    <Button variant="toggle" className="border-transparent">
+                    <Button variant="toggle" className="border-transparent" onClick={triggerModelImport}>
                         <ImportIcon className="w-6 h-6 text-item-border" />
                     </Button>
                 </Tooltip>

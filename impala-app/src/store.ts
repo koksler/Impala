@@ -64,6 +64,11 @@ interface AppState {
     setObjRot: (rot: [number, number, number]) => void;
     setObjScale: (scale: [number, number, number]) => void;
 
+    customModelUrl: string | null;
+    setCustomModelUrl: (url: string | null) => void;
+    customModelName: string | null;
+    setCustomModelName: (name: string | null) => void;
+
     // Material/Shadows
     shadowOpacity: number;
     shadowBlur: number;
@@ -151,6 +156,11 @@ export const useStore = create<AppState>((set) => ({
     setObjPos: (objPos) => set({ objPos }),
     setObjRot: (objRot) => set({ objRot }),
     setObjScale: (objScale) => set({ objScale }),
+
+    customModelUrl: null,
+    setCustomModelUrl: (customModelUrl) => set({ customModelUrl }),
+    customModelName: null,
+    setCustomModelName: (customModelName) => set({ customModelName }),
 
     shadowOpacity: 0.4,
     shadowBlur: 0.5,
