@@ -33,7 +33,21 @@ interface AppState {
     showModels: boolean;
     showGrid: boolean;
     showSplat: boolean;
-    toggleVisibility: (key: 'showVideo' | 'showModels' | 'showGrid' | 'showSplat') => void;
+    showCameraPath: boolean;
+    toggleVisibility: (key: 'showVideo' | 'showModels' | 'showGrid' | 'showSplat' | 'showCameraPath') => void;
+
+    videoOpacity: number;
+    setVideoOpacity: (v: number) => void;
+
+    transformTarget: 'object' | 'scene';
+    setTransformTarget: (t: 'object' | 'scene') => void;
+
+    scenePos: [number, number, number];
+    sceneRot: [number, number, number];
+    sceneScale: [number, number, number];
+    setScenePos: (pos: [number, number, number]) => void;
+    setSceneRot: (rot: [number, number, number]) => void;
+    setSceneScale: (scale: [number, number, number]) => void;
 
     videoDimensions: { width: number; height: number } | null;
     setVideoDimensions: (width: number, height: number) => void;
@@ -143,8 +157,22 @@ export const useStore = create<AppState>((set) => ({
     showModels: true,
     showGrid: true,
     showSplat: true,
+    showCameraPath: true,
     cameraFov: 45,
     toggleVisibility: (key) => set((state) => ({ [key]: !state[key] })),
+
+    videoOpacity: 0.5,
+    setVideoOpacity: (videoOpacity) => set({ videoOpacity }),
+
+    transformTarget: 'object',
+    setTransformTarget: (transformTarget) => set({ transformTarget }),
+
+    scenePos: [0, 0, 0],
+    sceneRot: [0, 0, 0],
+    sceneScale: [1, 1, 1],
+    setScenePos: (scenePos) => set({ scenePos }),
+    setSceneRot: (sceneRot) => set({ sceneRot }),
+    setSceneScale: (sceneScale) => set({ sceneScale }),
 
     videoDimensions: null,
     setVideoDimensions: (width, height) => set({ videoDimensions: { width, height } }),

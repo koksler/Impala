@@ -32,6 +32,10 @@ export const ObjectSettingsPanel: React.FC<ObjectSettingsPanelProps> = ({isMinim
         objPos, setObjPos,
         objRot, setObjRot,
         objScale, setObjScale,
+        scenePos, setScenePos,
+        sceneRot, setSceneRot,
+        sceneScale, setSceneScale,
+        transformTarget, setTransformTarget,
         shadowOpacity, setShadowOpacity,
         shadowBlur, setShadowBlur,
         shadowColor, setShadowColor,
@@ -41,6 +45,13 @@ export const ObjectSettingsPanel: React.FC<ObjectSettingsPanelProps> = ({isMinim
         setCustomModelUrl,
         setCustomModelName
     } = useStore();
+
+    const pos = transformTarget === 'object' ? objPos : scenePos;
+    const rot = transformTarget === 'object' ? objRot : sceneRot;
+    const scale = transformTarget === 'object' ? objScale : sceneScale;
+    const setPos = transformTarget === 'object' ? setObjPos : setScenePos;
+    const setRot = transformTarget === 'object' ? setObjRot : setSceneRot;
+    const setScale = transformTarget === 'object' ? setObjScale : setSceneScale;
 
     return (
         <Panel className={isMinimized ? "h-fit w-[280px]" : "h-full flex flex-col w-[280px]"}>
@@ -85,24 +96,40 @@ export const ObjectSettingsPanel: React.FC<ObjectSettingsPanelProps> = ({isMinim
 
                     {/* Transformation */}
                     <SectionHeader title="Transformation" />
+                    <div className="flex px-[12px] mt-[10px] gap-[8px]">
+                        <Button 
+                            variant="toggle" 
+                            onClick={() => setTransformTarget('object')}
+                            className={transformTarget === 'object' ? 'bg-bg-item text-text-accent flex-1 justify-center' : 'flex-1 justify-center border-transparent'}
+                        >
+                            3D Object
+                        </Button>
+                        <Button 
+                            variant="toggle" 
+                            onClick={() => setTransformTarget('scene')}
+                            className={transformTarget === 'scene' ? 'bg-bg-item text-text-accent flex-1 justify-center' : 'flex-1 justify-center border-transparent'}
+                        >
+                            Entire Scene
+                        </Button>
+                    </div>
                     <div className="flex flex-col gap-[10px] mt-[10px]">
                         <Vector3Input 
                             label="Location" 
                             icon={<LocateIcon />} 
-                            x={objPos[0]} y={objPos[1]} z={objPos[2]}
-                            onChange={(v) => setObjPos([v.x, v.y, v.z])} 
+                            x={pos[0]} y={pos[1]} z={pos[2]}
+                            onChange={(v) => setPos([v.x, v.y, v.z])} 
                         />
                         <Vector3Input 
                             label="Rotation" 
                             icon={<RotateIcon />} 
-                            x={objRot[0]} y={objRot[1]} z={objRot[2]}
-                            onChange={(v) => setObjRot([v.x, v.y, v.z])} 
+                            x={rot[0]} y={rot[1]} z={rot[2]}
+                            onChange={(v) => setRot([v.x, v.y, v.z])} 
                         />
                         <Vector3Input 
                             label="Scale" 
                             icon={<ScaleIcon />} 
-                            x={objScale[0]} y={objScale[1]} z={objScale[2]}
-                            onChange={(v) => setObjScale([v.x, v.y, v.z])} 
+                            x={scale[0]} y={scale[1]} z={scale[2]}
+                            onChange={(v) => setScale([v.x, v.y, v.z])} 
                         />
                     </div>
 
@@ -111,25 +138,33 @@ export const ObjectSettingsPanel: React.FC<ObjectSettingsPanelProps> = ({isMinim
                             <Button 
                                 variant="full"
                                 onClick={() => {
-                                    setObjPos([0, 0.5, 0]);
-                                    setObjRot([0, 0, 0]);
-                                    setObjScale([1, 1, 1]);
+                                    if (transformTarget === 'object') {
+                                        setObjPos([0, 0.5, 0]);
+                                        setObjRot([0, 0, 0]);
+                                        setObjScale([1, 1, 1]);
+                                    } else {
+                                        setScenePos([0, 0, 0]);
+                                        setSceneRot([0, 0, 0]);
+                                        setSceneScale([1, 1, 1]);
+                                    }
                                 }}
                             >
                                 Reset Transform
                             </Button>
                         </Tooltip>
-                        <Tooltip content="Move object to floor level" position="top">
-                            <Button 
-                                variant="full"
-                                onClick={() => {
-                                    // Set floor level as 0.5, assuming 1x1x1 box centered
-                                    setObjPos([objPos[0], 0.5, objPos[2]]);
-                                }}
-                            >
-                                Snap to Floor
-                            </Button>
-                        </Tooltip>
+                        {transformTarget === 'object' && (
+                            <Tooltip content="Move object to floor level" position="top">
+                                <Button 
+                                    variant="full"
+                                    onClick={() => {
+                                        // Set floor level as 0.5, assuming 1x1x1 box centered
+                                        setObjPos([objPos[0], 0.5, objPos[2]]);
+                                    }}
+                                >
+                                    Snap to Floor
+                                </Button>
+                            </Tooltip>
+                        )}
                     </div>
 
                     <Divider />

@@ -11,12 +11,13 @@ import {
     GausssplatIcon,
     ImportIcon,
     PlayIcon,
-    PauseIcon
+    PauseIcon,
+    PathIcon
 } from '../../icons/index';
 
 export const TimelinePanel: React.FC = () => {
     const { isPlaying, setPlaying, currentFrame, setCurrentFrame, totalFrames } = useStore();
-    const { showModels, showGrid, showSplat, toggleVisibility, cameraEnabled } = useStore();
+    const { showModels, showGrid, showSplat, showCameraPath, toggleVisibility, cameraEnabled } = useStore();
 
     const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setCurrentFrame(parseInt(e.target.value));
@@ -51,6 +52,7 @@ export const TimelinePanel: React.FC = () => {
 
                 {renderToggle(showGrid, NetIcon, () => toggleVisibility('showGrid'), "Toggle Grid")}
                 {renderToggle(showSplat, GausssplatIcon, () => toggleVisibility('showSplat'), "Toggle Gaussian Splat")}
+                {renderToggle(showCameraPath, PathIcon, () => toggleVisibility('showCameraPath'), "Toggle Camera Path")}
                 
                 <div className="w-[1px] h-[24px] bg-item-border mx-[4px] opacity-50"></div>
         

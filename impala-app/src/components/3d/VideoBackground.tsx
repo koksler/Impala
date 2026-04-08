@@ -8,7 +8,7 @@ interface VideoBackgroundProps {
 
 export const VideoBackground: React.FC<VideoBackgroundProps> = ({ url, visible }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const { currentFrame, isPlaying, totalFrames, setVideoElement } = useStore();
+  const { currentFrame, isPlaying, totalFrames, setVideoElement, videoOpacity } = useStore();
 
   useEffect(() => {
     if (videoRef.current) {
@@ -42,7 +42,8 @@ export const VideoBackground: React.FC<VideoBackgroundProps> = ({ url, visible }
       <video
         ref={videoRef}
         src={url}
-        className="w-full h-full object-contain opacity-30"
+        className="w-full h-full object-contain"
+        style={{ opacity: videoOpacity }}
         crossOrigin="anonymous"
         muted 
         playsInline

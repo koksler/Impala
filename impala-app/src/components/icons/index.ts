@@ -40,4 +40,4 @@ export { default as SwitchIcon } from './switch.svg?react';
 export { default as TrashIcon } from './trash.svg?react';
 export { default as UndoIcon } from './undo.svg?react';
 export { default as ImpalaLogoIcon } from './ImpalaLogoIcon.svg?react';
-
+export { default as PathIcon } from './pathIcon.svg?react'

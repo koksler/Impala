@@ -13,7 +13,8 @@ import { useStore } from '../../../store';
 import {
     LightbulbIcon,
     PlanetIcon,
-    PaletteIcon
+    PaletteIcon,
+    CameraIcon
 } from '../../icons/index';
 
 interface SceneSettingsPanelProps {
@@ -21,7 +22,7 @@ interface SceneSettingsPanelProps {
 }
 
 export const SceneSettingsPanel: React.FC<SceneSettingsPanelProps> = ({ isMinimized }) => {
-    const { envIntensity, setEnvIntensity, envRotation, setEnvRotation, envTint, setEnvTint, setIsBakingEnv, setBakedEnvTexture, setBakedEnvPreview, bakedEnvTexture, bakedEnvPreview } = useStore();
+    const { envIntensity, setEnvIntensity, envRotation, setEnvRotation, envTint, setEnvTint, setIsBakingEnv, setBakedEnvTexture, setBakedEnvPreview, bakedEnvPreview, videoOpacity, setVideoOpacity } = useStore();
     const [bakeProgress, setBakeProgress] = useState<number>(0); 
 
     return (
@@ -41,6 +42,16 @@ export const SceneSettingsPanel: React.FC<SceneSettingsPanelProps> = ({ isMinimi
                 <SectionHeader title="Environment Settings" />
                 
                 <div className="flex flex-col gap-[10px] mt-[10px] px-[12px]">
+                    <div className="flex items-center gap-[10px]">
+                        <Slider 
+                            label="Video Opacity" 
+                            value={videoOpacity} 
+                            onChange={setVideoOpacity} 
+                            className="flex-1"
+                        />
+                        <CameraIcon className="w-5 h-5 text-text-main shrink-0" />
+                    </div>
+
                     <div className="flex items-center gap-[10px]">
                         <Slider 
                             label="Environment Intensity" 

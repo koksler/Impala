@@ -11,8 +11,9 @@ import { EnvironmentBaker } from '../3d/EnvironmentBaker';
 
 export const EditorCanvas = ({ splatUrl }: { splatUrl?: string }) => {
   const { 
-    showModels, showGrid, showSplat, cameraEnabled, isPlaying,
+    showModels, showGrid, showSplat, showCameraPath, cameraEnabled, isPlaying,
     activeTool, objPos, objRot, objScale, setObjPos, setObjRot, setObjScale,
+    transformTarget, scenePos, sceneRot, sceneScale, setScenePos, setSceneRot, setSceneScale,
     shadowOpacity, shadowBlur, shadowColor,
     envIntensity, envRotation, envTint, snapToGrid,
     cropBox, setCropBox, isCropping, customModelUrl,
@@ -20,6 +21,7 @@ export const EditorCanvas = ({ splatUrl }: { splatUrl?: string }) => {
   } = useStore();
   
   const [cube, setCube] = useState<THREE.Object3D | null>(null);
+  const [sceneGroupWrapper, setSceneGroupWrapper] = useState<THREE.Group | null>(null);
   const [cropCube, setCropCube] = useState<THREE.Mesh | null>(null);
 
   return (
@@ -40,10 +42,29 @@ export const EditorCanvas = ({ splatUrl }: { splatUrl?: string }) => {
       />
 
       <Suspense fallback={null}>
-        <GaussianScene url={splatUrl} visible={showSplat} />
-        <CameraPath />
+        <group ref={(node) => setSceneGroupWrapper(node)} position={scenePos} rotation={sceneRot} scale={sceneScale}>
+          <GaussianScene url={splatUrl} visible={showSplat} />
+          {showCameraPath && <CameraPath />}
+        </group>
 
-        {showModels && !isCropping && (activeTool === 'translate' || activeTool === 'rotate' || activeTool === 'scale') && cube && (
+        {transformTarget === 'scene' && !isCropping && (activeTool === 'translate' || activeTool === 'rotate' || activeTool === 'scale') && sceneGroupWrapper && (
+          <TransformControls 
+            object={sceneGroupWrapper}
+            mode={activeTool} 
+            translationSnap={snapToGrid ? 1 : null}
+            rotationSnap={snapToGrid ? Math.PI / 8 : null}
+            scaleSnap={snapToGrid ? 0.25 : null}
+            onChange={() => {
+              if (sceneGroupWrapper) {
+                setScenePos([sceneGroupWrapper.position.x, sceneGroupWrapper.position.y, sceneGroupWrapper.position.z]);
+                setSceneRot([sceneGroupWrapper.rotation.x, sceneGroupWrapper.rotation.y, sceneGroupWrapper.rotation.z]);
+                setSceneScale([sceneGroupWrapper.scale.x, sceneGroupWrapper.scale.y, sceneGroupWrapper.scale.z]);
+              }
+            }}
+          />
+        )}
+
+        {transformTarget === 'object' && showModels && !isCropping && (activeTool === 'translate' || activeTool === 'rotate' || activeTool === 'scale') && cube && (
           <TransformControls 
             object={cube}
             mode={activeTool} 
@@ -64,7 +85,7 @@ export const EditorCanvas = ({ splatUrl }: { splatUrl?: string }) => {
           
           {isCropping && (
             <>
-              <mesh ref={setCropCube} position={cropBox.position} rotation={cropBox.rotation} scale={cropBox.scale} renderOrder={999}>
+              <mesh ref={(node) => setCropCube(node)} position={cropBox.position} rotation={cropBox.rotation} scale={cropBox.scale} renderOrder={999}>
                 <boxGeometry args={[1, 1, 1]} />
                 <meshBasicMaterial color="#FF3B3B" wireframe transparent opacity={0.5} depthWrite={false} depthTest={false} />
               </mesh>
@@ -94,8 +115,10 @@ export const EditorCanvas = ({ splatUrl }: { splatUrl?: string }) => {
           )}
 
           {showModels && customModelUrl && (
-            <group ref={setCube as any} position={objPos} rotation={objRot} scale={objScale}>
-              <CustomModel url={customModelUrl} />
+            <group ref={(node) => setCube(node)} position={objPos} rotation={objRot} scale={objScale}>
+              <Suspense fallback={null}>
+                <CustomModel url={customModelUrl} />
+              </Suspense>
             </group>
           )}
 
@@ -115,7 +138,7 @@ export const EditorCanvas = ({ splatUrl }: { splatUrl?: string }) => {
       </Suspense>
 
       <CameraSync />
-      <OrbitControls makeDefault enabled={!cameraEnabled && !isPlaying} />
+      <OrbitControls makeDefault={!cameraEnabled && !isPlaying} enabled={!cameraEnabled && !isPlaying} />
     </Canvas>
   );
 };

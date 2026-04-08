@@ -8,7 +8,7 @@ interface GaussianSceneProps {
   visible: boolean;
 }
 
-export const GaussianScene: React.FC<GaussianSceneProps> = ({ url, visible }) => {
+export const GaussianScene: React.FC<GaussianSceneProps> = React.memo(({ url, visible }) => {
   const groupRef = useRef<THREE.Group>(null);
   const viewerRef = useRef<any>(null);
   
@@ -38,4 +38,4 @@ export const GaussianScene: React.FC<GaussianSceneProps> = ({ url, visible }) =>
   return (
     <group ref={groupRef} visible={visible} rotation={[-Math.PI / 2, 0, 0]} />
   );
-};
+});

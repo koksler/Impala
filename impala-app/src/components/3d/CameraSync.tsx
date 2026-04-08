@@ -9,7 +9,8 @@ export const CameraSync = () => {
     const { camera } = useThree();
     const {
       cameraData, currentFrame, isPlaying, cameraEnabled,
-      setCurrentFrame, totalFrames, cameraFov, videoDimensions
+      setCurrentFrame, totalFrames, cameraFov, videoDimensions,
+      scenePos, sceneRot, sceneScale
     } = useStore();
     const clockRef = useRef(0);
   
@@ -46,9 +47,18 @@ export const CameraSync = () => {
         // Transform to World Space (Align with the [-PI/2, 0, 0] group rotation)
         const finalMatrix = new THREE.Matrix4().multiplyMatrices(WORLD_ROTATION, mat);
   
+        // Multiply by the scene pos/rot/scale so camera follows the transformed scene
+        const sceneTransform = new THREE.Matrix4().compose(
+            new THREE.Vector3(scenePos[0], scenePos[1], scenePos[2]),
+            new THREE.Quaternion().setFromEuler(new THREE.Euler(sceneRot[0], sceneRot[1], sceneRot[2])),
+            new THREE.Vector3(sceneScale[0], sceneScale[1], sceneScale[2])
+        );
+
+        const worldCameraMatrix = new THREE.Matrix4().multiplyMatrices(sceneTransform, finalMatrix);
+
         // Force inject to camera
         camera.matrixAutoUpdate = false;
-        camera.matrix.copy(finalMatrix);
+        camera.matrix.copy(worldCameraMatrix);
         camera.matrixWorldNeedsUpdate = true;
         
         if (videoDimensions) {
@@ -59,7 +69,7 @@ export const CameraSync = () => {
             }
         }
     
-      }, [currentFrame, cameraData, camera, cameraEnabled, cameraFov, videoDimensions]);
+      }, [currentFrame, cameraData, camera, cameraEnabled, cameraFov, videoDimensions, scenePos, sceneRot, sceneScale]);
   
     return null;
 };
