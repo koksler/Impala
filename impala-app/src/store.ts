@@ -7,6 +7,16 @@ export interface DataparserTransform {
     scale: number;
 }
 
+export type ToastType = 'process' | 'error' | 'success';
+
+export type Toast = {
+    id: string;
+    title: string;
+    message: string;
+    type: ToastType;
+    progress?: number;
+};
+
 interface AppState {
     serverStatus: 'online' | 'offline' | 'checking';
     checkServerStatus: () => Promise<void>;
@@ -118,6 +128,14 @@ interface AppState {
     setActiveProjectId: (id: string | null) => void;
     activeSplatUrl: string | null;
     setActiveSplatUrl: (url: string | null) => void;
+
+    toasts: Toast[];
+    addToast: (title: string, message: string, type: ToastType, id?: string) => string;
+    updateToast: (id: string, updates: Partial<Toast>) => void;
+    removeToast: (id: string) => void;
+
+    isAppLoading: boolean;
+    setIsAppLoading: (loading: boolean) => void;
 }
 
 interface CameraFrame {
@@ -250,4 +268,37 @@ export const useStore = create<AppState>((set) => ({
         currentFrame: 0,
         cameraEnabled: true 
     }),
+
+    toasts: [],
+    addToast: (title, message, type, id) => {
+        const toastId = id || Math.random().toString(36).substring(2, 9);
+        set((state) => ({
+            toasts: [...state.toasts, { id: toastId, title, message, type, progress: type === 'process' ? 0 : undefined }]
+        }));
+
+        if (type !== 'process') {
+            setTimeout(() => {
+                useStore.getState().removeToast(toastId);
+            }, 5000);
+        }
+
+        return toastId;
+    },
+    updateToast: (id, updates) => {
+        set((state) => ({
+            toasts: state.toasts.map((t) => (t.id === id ? { ...t, ...updates } : t))
+        }));
+
+        if (updates.type && updates.type !== 'process') {
+            setTimeout(() => {
+                useStore.getState().removeToast(id);
+            }, 5000);
+        }
+    },
+    removeToast: (id) => set((state) => ({
+        toasts: state.toasts.filter((t) => t.id !== id)
+    })),
+
+    isAppLoading: true,
+    setIsAppLoading: (isAppLoading) => set({ isAppLoading }),
 }));

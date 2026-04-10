@@ -4,17 +4,23 @@ import { HomePage, type Project } from './components/ui/menus/homePage';
 import { EditorView } from './components/layouts/EditorView';
 import { useStore } from './store';
 
+import { ToastContainer } from './components/ui/ToastContainer';
+import { InitialLoader } from './components/ui/InitialLoader';
+
 export default function App() {
   const [currentPage, setCurrentPage] = useState<'home' | 'project'>('home');
   const [activeProject, setActiveProject] = useState<Project | null>(null);
 
-  const { serverStatus, checkServerStatus, setCameraData, setVideoDimensions, setActiveTool, setIsCropping, activeSplatUrl } = useStore();
+  const { serverStatus, checkServerStatus, setCameraData, setVideoDimensions, setActiveTool, setIsCropping, activeSplatUrl, setIsAppLoading } = useStore();
 
   useEffect(() => {
-    checkServerStatus();
+    checkServerStatus().then(() => {
+        // Hide loader after first check
+        setTimeout(() => setIsAppLoading(false), 1000);
+    });
     const id = setInterval(checkServerStatus, 5000);
     return () => clearInterval(id);
-  }, [checkServerStatus]);
+  }, [checkServerStatus, setIsAppLoading]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -60,6 +66,10 @@ export default function App() {
   }, [setActiveTool]);
 
   const handleOpenProject = (project: Project) => {
+    const { addToast, updateToast } = useStore.getState();
+    
+    addToast("Opening Project", "Fetching camera and scene data...", "process", "loading-project");
+
     setActiveProject(project);
     setCurrentPage('project');
     useStore.getState().setActiveProjectId(project.id);
@@ -70,6 +80,7 @@ export default function App() {
     fetch(camerasUrl)
       .then(r => r.json())
       .then(data => {
+        updateToast("loading-project", { message: "Metadata loaded. Preparing 3D viewer...", progress: 30 });
         console.log("[DEBUG] Cam data:", data);
 
         let frames = [];
@@ -98,9 +109,13 @@ export default function App() {
             console.log(`Loaded ${frames.length} frames. FOV: ${fov.toFixed(2)}`);
         } else {
             console.error("[ERROR] Couldn't find cameras array");
+            updateToast("loading-project", { type: 'error', title: 'Load Error', message: "Invalid camera data received." });
         }
       })
-      .catch(err => console.error("[FATAL] Camera loading error:", err));
+      .catch(err => {
+          console.error("[FATAL] Camera loading error:", err);
+          updateToast("loading-project", { type: 'error', title: 'Load Failed', message: "Network error while fetching metadata." });
+      });
   };
 
   return (
@@ -122,6 +137,9 @@ export default function App() {
           splatUrl={activeSplatUrl || activeProject?.splat_url} 
         />
       )}
+
+      <ToastContainer />
+      <InitialLoader />
     </div>
   );
 }

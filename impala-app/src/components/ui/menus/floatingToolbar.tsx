@@ -17,17 +17,16 @@ import * as THREE from 'three';
 
 export const FloatingToolbar: React.FC = () => {
     const { activeTool, setActiveTool, snapToGrid, setSnapToGrid, isCropping, setIsCropping } = useStore();
-    const [isProcessingCrop, setIsProcessingCrop] = React.useState(false);
 
     const handleApplyCrop = async () => {
-        const { cropBox, activeProjectId, setActiveSplatUrl } = useStore.getState();
+        const { cropBox, activeProjectId, setActiveSplatUrl, addToast, updateToast, removeToast } = useStore.getState();
 
         if (!activeProjectId) {
-            console.error("Cannot crop: No active project ID.");
+            addToast("Crop Error", "No active project ID.", "error");
             return;
         }
 
-        setIsProcessingCrop(true);
+        const toastId = addToast("Cropping Splats", "Filtering vertex data in the backend...", "process");
 
         try {
             // The crop box is rendered inside a <group position={[0, -1.5, 0]}> in EditorCanvas
@@ -59,6 +58,8 @@ export const FloatingToolbar: React.FC = () => {
             // We combine the matrices: P_local = Inverse(CropWorld) * SplatWorld * P_raw
             const finalMatrix = inverseCropWorldMatrix.multiply(splatWorldMatrix);
 
+            updateToast(toastId, { progress: 50, message: "Crunching numbers in NumPy..." });
+
             const res = await fetch(`http://localhost:8000/api/projects/${activeProjectId}/crop`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -71,14 +72,24 @@ export const FloatingToolbar: React.FC = () => {
             const data = await res.json();
 
             if (data.status === 'success' && data.new_url) {
-                console.log("Crop successful, updating splat URL.");
                 setActiveSplatUrl(data.new_url);
                 setIsCropping(false);
+                updateToast(toastId, { 
+                    type: 'success', 
+                    title: 'Crop Applied', 
+                    message: 'Gaussian data has been updated.',
+                    progress: 100 
+                });
+                
+                // Success toasts auto-remove in store, but we can also manual remove after delay if we want
             }
         } catch (err) {
             console.error('Crop failed.', err);
-        } finally {
-            setIsProcessingCrop(false);
+            updateToast(toastId, { 
+                type: 'error', 
+                title: 'Crop Failed', 
+                message: err instanceof Error ? err.message : 'Unknown error' 
+            });
         }
     };
 
@@ -144,9 +155,8 @@ export const FloatingToolbar: React.FC = () => {
                     <Button
                         onClick={handleApplyCrop}
                         variant="full"
-                        disabled={isProcessingCrop}
                     >
-                        {isProcessingCrop ? 'Cropping...' : 'Apply Crop'}
+                        Apply Crop
                     </Button>
                 </div>
             )}

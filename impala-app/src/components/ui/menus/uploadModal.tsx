@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '../buttons/buttons';
 import { ProgressBar } from '../progressBar';
 import type { Project } from './homePage';
+import { useStore } from '../../../store';
 
 interface UploadModalProps {
     isOpen: boolean;
@@ -49,8 +50,9 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
     // ===============================
 
     const handleStart = async () => {
+        const { addToast } = useStore.getState();
         if (!file) {
-            alert("Please select a file first!");
+            addToast("Upload Missing", "Please select a file first!", "error");
             return;
         }
 
@@ -81,14 +83,14 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
                         onSuccess(statusData.project); 
                     } else if (statusData.status === 'error') {
                         clearInterval(interval);
-                        alert("Processing failed on the server.");
+                        addToast("Processing Failed", "The server encountered an error while baking splats.", "error");
                         onClose();
                     }
                 }, 3000);
             }
         } catch (error) {
             console.error("Upload error:", error);
-            alert("Server error!");
+            addToast("Server Error", "Could not connect to the upload service.", "error");
             onClose();
         }
     };

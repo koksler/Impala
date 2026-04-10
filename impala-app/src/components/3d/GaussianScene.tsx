@@ -23,7 +23,28 @@ export const GaussianScene: React.FC<GaussianSceneProps> = React.memo(({ url, vi
       sphericalHarmonicsDegree: 2,
     });
 
-    viewer.addSplatScene(url, { showLoadingUI: false });
+    useStore.getState().updateToast("loading-project", { message: "Loading Gaussian Splat...", progress: 60 });
+
+    viewer.addSplatScene(url, { showLoadingUI: false })
+      .then(() => {
+        const { updateToast } = useStore.getState();
+        updateToast("loading-project", { 
+            type: 'success', 
+            title: 'Project Ready', 
+            message: '3D scene has been synchronized.',
+            progress: 100 
+        });
+      })
+      .catch(err => {
+        console.error("Splat load error:", err);
+        const { updateToast } = useStore.getState();
+        updateToast("loading-project", { 
+            type: 'error', 
+            title: 'Scene Load Failed', 
+            message: 'Failed to initialize Gaussian viewer.' 
+        });
+      });
+
     groupRef.current.add(viewer);
     viewerRef.current = viewer;
     setSplatViewer(viewer);
