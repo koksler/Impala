@@ -63,7 +63,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
         formData.append("title", projectName);
 
         try {
-            const uploadRes = await fetch("http://localhost:8000/api/upload", {
+            const uploadRes = await fetch("/api/upload", {
                 method: "POST",
                 body: formData,
             });
@@ -73,7 +73,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
                 setStatus('processing');
                 
                 const interval = setInterval(async () => {
-                    const statusRes = await fetch(`http://localhost:8000/api/projects/${data.project_id}/status`);
+                    const statusRes = await fetch(`/api/projects/${data.project_id}/status`);
                     const statusData = await statusRes.json();
 
                     setProgress(statusData.progress || 0);

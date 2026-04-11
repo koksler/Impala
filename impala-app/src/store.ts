@@ -156,7 +156,7 @@ export const useStore = create<AppState>((set) => ({
 
     checkServerStatus: async () => {
         try {
-            const response = await fetch("http://localhost:8000/api/status", {
+            const response = await fetch("/api/status", {
             });
 
             if (response.ok) {
@@ -342,7 +342,7 @@ export const useStore = create<AppState>((set) => ({
 
         try {
             const res = await fetch(
-                `http://localhost:8000/api/projects/${activeProjectId}/save`,
+                `/api/projects/${activeProjectId}/save`,
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },

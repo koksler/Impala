@@ -142,18 +142,45 @@ def get_dataparser_transforms(project_id: str):
     
 @app.get("/api/projects/{project_id}/cameras")
 def get_project_cameras(project_id: str):
-    path = f"exports/{project_id}/transforms_train.json"
+    """Returns camera poses enriched with intrinsics from COLMAP.
     
-    if os.path.exists(path):
-        with open(path, "r") as f:
-            return json.load(f)
-            
-    fallback_path = f"exports/{project_id}/cameras.json"
-    if os.path.exists(fallback_path):
-        with open(fallback_path, "r") as f:
-            return json.load(f)
-            
-    return {"error": "Camera data not found", "searched_path": path}
+    ns-export cameras produces a bare array of {file_path, transform} objects
+    with NO intrinsics.  The intrinsics live in processed_data/transforms.json
+    (the COLMAP-derived file). We merge them so the frontend has everything it
+    needs to calculate the correct FOV.
+    """
+    poses_path   = f"exports/{project_id}/transforms_train.json"
+    colmap_path  = f"processed_data/{project_id}/transforms.json"
+
+    cameras_raw = None
+    if os.path.exists(poses_path):
+        with open(poses_path, "r") as f:
+            cameras_raw = json.load(f)
+    else:
+        fallback = f"exports/{project_id}/cameras.json"
+        if os.path.exists(fallback):
+            with open(fallback, "r") as f:
+                cameras_raw = json.load(f)
+
+    # Normalise to a list of frame dicts no matter what nerfstudio produces
+    if isinstance(cameras_raw, list):
+        frames = cameras_raw
+    elif isinstance(cameras_raw, dict):
+        frames = cameras_raw.get("frames") or cameras_raw.get("cameras") or list(cameras_raw.values())
+    else:
+        frames = []
+
+    # Load COLMAP intrinsics (fl_y, h, w, etc.)
+    intrinsics = {}
+    if os.path.exists(colmap_path):
+        with open(colmap_path, "r") as f:
+            colmap = json.load(f)
+        for key in ("fl_x", "fl_y", "cx", "cy", "w", "h",
+                    "camera_angle_x", "camera_angle_y", "camera_model"):
+            if key in colmap and colmap[key] is not None:
+                intrinsics[key] = colmap[key]
+
+    return {"frames": frames, **intrinsics}
 
 class SaveSettings(BaseModel):
     objPos: list[float] | None = None

@@ -60,7 +60,7 @@ export const FloatingToolbar: React.FC = () => {
 
             updateToast(toastId, { progress: 50, message: "Crunching numbers in NumPy..." });
 
-            const res = await fetch(`http://localhost:8000/api/projects/${activeProjectId}/crop`, {
+            const res = await fetch(`/api/projects/${activeProjectId}/crop`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

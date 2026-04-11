@@ -25,7 +25,7 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
     const [isModalOpen, setIsModalOpen] = useState(false);
 
      useEffect(() => {
-        fetch('http://localhost:8000/api/projects')
+        fetch('/api/projects')
             .then(res => res.json())
             .then((data: Project[]) => {
                 setProjects(data);
