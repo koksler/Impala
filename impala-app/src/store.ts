@@ -136,7 +136,11 @@ interface AppState {
 
     isAppLoading: boolean;
     setIsAppLoading: (loading: boolean) => void;
+
+    saveCurrentProject: () => Promise<void>;
+    loadProjectSettings: (projectData: Record<string, any>) => void;
 }
+
 
 interface CameraFrame {
     file_path: string;
@@ -301,4 +305,104 @@ export const useStore = create<AppState>((set) => ({
 
     isAppLoading: true,
     setIsAppLoading: (isAppLoading) => set({ isAppLoading }),
+
+    saveCurrentProject: async () => {
+        const state = useStore.getState();
+        const { activeProjectId, addToast, updateToast } = state;
+
+        if (!activeProjectId) {
+            addToast('Save Error', 'No active project to save.', 'error');
+            return;
+        }
+
+        const toastId = addToast('Saving Project', 'Syncing scene data to server...', 'process', 'save-project');
+
+        const payload = {
+            objPos: state.objPos,
+            objRot: state.objRot,
+            objScale: state.objScale,
+            scenePos: state.scenePos,
+            sceneRot: state.sceneRot,
+            sceneScale: state.sceneScale,
+            shadowOpacity: state.shadowOpacity,
+            shadowBlur: state.shadowBlur,
+            shadowColor: state.shadowColor,
+            matRoughness: state.matRoughness,
+            matMetallic: state.matMetallic,
+            envIntensity: state.envIntensity,
+            envRotation: state.envRotation,
+            envTint: state.envTint,
+            // Save the active splat URL so cropped splat files are restored
+            savedSplatUrl: state.activeSplatUrl,
+            // Blob URLs are ephemeral (session-scoped) — never persist them.
+            // The user must re-import the model file after reopening the project.
+            customModelUrl: state.customModelUrl?.startsWith('blob:') ? null : state.customModelUrl,
+            customModelName: state.customModelUrl?.startsWith('blob:') ? null : state.customModelName,
+        };
+
+        try {
+            const res = await fetch(
+                `http://localhost:8000/api/projects/${activeProjectId}/save`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                }
+            );
+
+            if (!res.ok) throw new Error(`Server responded with ${res.status}`);
+
+            updateToast(toastId, {
+                type: 'success',
+                title: 'Project Saved',
+                message: 'All scene settings have been saved.',
+            });
+        } catch (err) {
+            console.error('[SAVE] Failed:', err);
+            updateToast(toastId, {
+                type: 'error',
+                title: 'Save Failed',
+                message: 'Could not save project. Is the server running?',
+            });
+        }
+    },
+
+    loadProjectSettings: (projectData) => {
+        const patch: Partial<AppState> = {};
+
+        if (Array.isArray(projectData.objPos))    patch.objPos    = projectData.objPos    as [number,number,number];
+        if (Array.isArray(projectData.objRot))    patch.objRot    = projectData.objRot    as [number,number,number];
+        if (Array.isArray(projectData.objScale))  patch.objScale  = projectData.objScale  as [number,number,number];
+        if (Array.isArray(projectData.scenePos))  patch.scenePos  = projectData.scenePos  as [number,number,number];
+        if (Array.isArray(projectData.sceneRot))  patch.sceneRot  = projectData.sceneRot  as [number,number,number];
+        if (Array.isArray(projectData.sceneScale))patch.sceneScale= projectData.sceneScale as [number,number,number];
+
+        if (projectData.shadowOpacity  != null) patch.shadowOpacity  = projectData.shadowOpacity;
+        if (projectData.shadowBlur     != null) patch.shadowBlur     = projectData.shadowBlur;
+        if (projectData.shadowColor    != null) patch.shadowColor    = projectData.shadowColor;
+        if (projectData.matRoughness   != null) patch.matRoughness   = projectData.matRoughness;
+        if (projectData.matMetallic    != null) patch.matMetallic    = projectData.matMetallic;
+        if (projectData.envIntensity   != null) patch.envIntensity   = projectData.envIntensity;
+        if (projectData.envRotation    != null) patch.envRotation    = projectData.envRotation;
+        if (projectData.envTint        != null) patch.envTint        = projectData.envTint;
+
+        // Restore cropped splat URL if one was saved
+        if (projectData.savedSplatUrl  != null) patch.activeSplatUrl = projectData.savedSplatUrl;
+
+        // Blob URLs died with the previous session — never try to restore them.
+        // If a non-blob server URL was saved, it's safe to restore.
+        const savedModelUrl: string | null = projectData.customModelUrl ?? null;
+        if (savedModelUrl && !savedModelUrl.startsWith('blob:')) {
+            patch.customModelUrl  = savedModelUrl;
+            patch.customModelName = projectData.customModelName ?? null;
+        } else {
+            // Explicitly null out any stale blob URL that might be in state
+            patch.customModelUrl  = null;
+            patch.customModelName = null;
+        }
+
+        if (Object.keys(patch).length > 0) {
+            set(patch);
+        }
+    },
 }));

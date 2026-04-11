@@ -1,5 +1,56 @@
 [
     {
+        "id": "4bb64e17-f17b-40a8-b2fa-6b5d71cedb8c",
+        "title": "New 3D Scene",
+        "lastOpened": "2026-04-11",
+        "img": "/projects_assets/default_thumb.webp",
+        "splat_url": "http://localhost:8000/exports/4bb64e17-f17b-40a8-b2fa-6b5d71cedb8c/splat.ply",
+        "cameras_url": "http://localhost:8000/api/projects/4bb64e17-f17b-40a8-b2fa-6b5d71cedb8c/cameras",
+        "video_url": "http://localhost:8000/uploads/4bb64e17-f17b-40a8-b2fa-6b5d71cedb8c.mp4",
+        "dataparser_transforms_url": "http://localhost:8000/api/projects/4bb64e17-f17b-40a8-b2fa-6b5d71cedb8c/dataparser-transforms",
+        "objPos": [
+            0.0,
+            0.5,
+            0.0
+        ],
+        "objRot": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "objScale": [
+            1.0,
+            1.0,
+            1.0
+        ],
+        "scenePos": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "sceneRot": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "sceneScale": [
+            1.0,
+            1.0,
+            1.0
+        ],
+        "shadowOpacity": 0.4,
+        "shadowBlur": 0.5,
+        "shadowColor": "#313133",
+        "matRoughness": 0.2,
+        "matMetallic": 0.8,
+        "envIntensity": 1.0,
+        "envRotation": 0.0,
+        "envTint": "#ffffff",
+        "customModelUrl": null,
+        "customModelName": null,
+        "savedSplatUrl": "http://localhost:8000/exports/4bb64e17-f17b-40a8-b2fa-6b5d71cedb8c/splat_cropped_731b58ce.ply"
+    },
+    {
         "id": "8fe078aa-9432-4523-865f-98bd3c951cb3",
         "title": "Zalupa",
         "lastOpened": "2026-04-05",

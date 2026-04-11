@@ -86,13 +86,18 @@ def background_pipeline(file_path: str, project_id: str, title: str):
     if success:
         project_status_db[project_id] = {"status": "done", "progress": 100}
         
+        # Derive the public video URL from the saved upload filename
+        upload_filename = os.path.basename(file_path)
+
         new_project = {
             "id": project_id,
             "title": title,
             "lastOpened": datetime.now().strftime("%Y-%m-%d"),
             "img": "/projects_assets/default_thumb.webp",
             "splat_url": f"http://localhost:8000/exports/{project_id}/splat.ply",
-            "cameras_url": f"http://localhost:8000/api/projects/{project_id}/cameras"
+            "cameras_url": f"http://localhost:8000/api/projects/{project_id}/cameras",
+            "video_url": f"http://localhost:8000/uploads/{upload_filename}",
+            "dataparser_transforms_url": f"http://localhost:8000/api/projects/{project_id}/dataparser-transforms",
         }
         
         with open(PROJECTS_FILE, "r") as f:
@@ -149,6 +154,46 @@ def get_project_cameras(project_id: str):
             return json.load(f)
             
     return {"error": "Camera data not found", "searched_path": path}
+
+class SaveSettings(BaseModel):
+    objPos: list[float] | None = None
+    objRot: list[float] | None = None
+    objScale: list[float] | None = None
+    scenePos: list[float] | None = None
+    sceneRot: list[float] | None = None
+    sceneScale: list[float] | None = None
+    shadowOpacity: float | None = None
+    shadowBlur: float | None = None
+    shadowColor: str | None = None
+    matRoughness: float | None = None
+    matMetallic: float | None = None
+    envIntensity: float | None = None
+    envRotation: float | None = None
+    envTint: str | None = None
+    customModelUrl: str | None = None
+    customModelName: str | None = None
+    savedSplatUrl: str | None = None
+
+@app.post("/api/projects/{project_id}/save")
+def save_project_settings(project_id: str, settings: SaveSettings):
+    """Persist 3D scene / material / environment settings for a project."""
+    with open(PROJECTS_FILE, "r") as f:
+        projects = json.load(f)
+
+    project = next((p for p in projects if p["id"] == project_id), None)
+    if project is None:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Merge only the fields that were actually sent (non-None)
+    payload = settings.model_dump(exclude_none=True)
+    project.update(payload)
+    project["lastOpened"] = datetime.now().strftime("%Y-%m-%d")
+
+    with open(PROJECTS_FILE, "w") as f:
+        json.dump(projects, f, indent=4)
+
+    return {"status": "saved", "project_id": project_id}
 
 class CropRequest(BaseModel):
     inverse_matrix: list[float]

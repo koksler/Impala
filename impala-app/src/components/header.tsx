@@ -9,6 +9,7 @@ import {
   ImpalaLogoIcon
 } from './icons/index';
 import { Tooltip } from './ui/Tooltip';
+import { useStore } from '../store';
 
 interface HeaderProps {
     variant?: 'project' | 'home';
@@ -23,6 +24,8 @@ export const Header: React.FC<HeaderProps> = ({
     serverStatus = 'online',
     onGoHome
 }) => {
+    const saveCurrentProject = useStore(s => s.saveCurrentProject);
+
     return (
         <header className="relative w-full h-[60px] px-[16px] py-[10px] flex items-center justify-between bg-bg border-b border-bg-border text-base text-text-main">
             
@@ -75,7 +78,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                         {/* Document Controls */}
                         <Tooltip content="Save Project" hotkey="Ctrl+S" position="bottom">
-                            <Button variant="icon">
+                            <Button variant="icon" onClick={saveCurrentProject}>
                                 <SaveIcon className="w-6 h-6" />
                             </Button>
                         </Tooltip>

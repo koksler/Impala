@@ -44,7 +44,7 @@ export default function App() {
       
       if (ctrl && e.key.toLowerCase() === 's') {
          e.preventDefault();
-         console.log("Save triggered");
+         useStore.getState().saveCurrentProject();
          return;
       }
 
@@ -66,7 +66,7 @@ export default function App() {
   }, [setActiveTool]);
 
   const handleOpenProject = (project: Project) => {
-    const { addToast, updateToast } = useStore.getState();
+    const { addToast, updateToast, loadProjectSettings } = useStore.getState();
     
     addToast("Opening Project", "Fetching camera and scene data...", "process", "loading-project");
 
@@ -74,6 +74,15 @@ export default function App() {
     setCurrentPage('project');
     useStore.getState().setActiveProjectId(project.id);
     useStore.getState().setActiveSplatUrl(project.splat_url);
+
+    // Restore any previously saved settings from the project record
+    fetch(`http://localhost:8000/api/projects`)
+      .then(r => r.json())
+      .then((allProjects: Project[]) => {
+        const saved = allProjects.find(p => p.id === project.id);
+        if (saved) loadProjectSettings(saved as Record<string, any>);
+      })
+      .catch(err => console.warn('[LOAD SETTINGS] Could not restore settings:', err));
 
     const camerasUrl = project.cameras_url || `http://localhost:8000/api/projects/${project.id}/cameras`;
 
@@ -93,11 +102,26 @@ export default function App() {
         }
 
         if (frames.length > 0) {
-            // FOV weird calc
+            // Resolve FOV from available intrinsics, in priority order:
+            //   1. per-frame fl_y + h  (COLMAP / Nerfstudio splatfacto export)
+            //   2. root camera_angle_y (Nerfstudio instant-ngp JSON, in radians)
+            //   3. root camera_angle_x
+            //   4. default 45°
             let fov = 45;
             const first = frames[0];
-            if (first.fl_y && first.h) {
-                fov = (2 * Math.atan(first.h / (2 * first.fl_y))) * (180 / Math.PI);
+            const frameH = first.h ?? data.h;
+            const frameFlY = first.fl_y ?? data.fl_y;
+
+            if (frameFlY && frameH) {
+                fov = (2 * Math.atan(frameH / (2 * frameFlY))) * (180 / Math.PI);
+            } else if (data.camera_angle_y) {
+                fov = data.camera_angle_y * (180 / Math.PI);
+            } else if (data.camera_angle_x) {
+                // camera_angle_x is horizontal — derive vertical fov using aspect
+                const w = data.w || first.w || 1920;
+                const h = data.h || first.h || 1080;
+                const hFovRad = data.camera_angle_x;
+                fov = (2 * Math.atan(Math.tan(hFovRad / 2) * (h / w))) * (180 / Math.PI);
             }
 
             setCameraData(frames, fov);
@@ -106,7 +130,7 @@ export default function App() {
             const h = data.h || first.h || 1080;
             setVideoDimensions(w, h);
             
-            console.log(`Loaded ${frames.length} frames. FOV: ${fov.toFixed(2)}`);
+            console.log(`Loaded ${frames.length} frames. FOV: ${fov.toFixed(2)}° | Res: ${w}×${h}`);
         } else {
             console.error("[ERROR] Couldn't find cameras array");
             updateToast("loading-project", { type: 'error', title: 'Load Error', message: "Invalid camera data received." });
@@ -117,6 +141,7 @@ export default function App() {
           updateToast("loading-project", { type: 'error', title: 'Load Failed', message: "Network error while fetching metadata." });
       });
   };
+
 
   return (
     <div className="flex flex-col w-full h-screen bg-bg overflow-hidden text-text-main">

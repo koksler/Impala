@@ -3,7 +3,7 @@ title Impala Launcher
 chcp 65001 >nul
 
 echo =========================================
-echo      Запуск проекта Impala...
+echo    Запуск проекта Impala...
 echo =========================================
 
 :: === 1. ЗАПУСК ФРОНТЕНДА (React) ===
@@ -12,6 +12,11 @@ start "Impala Frontend" cmd /k "cd /d D:\Media\Code\Impala\Impala\impala-app && 
 
 :: === 2. ЗАПУСК БЭКЕНДА (в текущем окне) ===
 echo [2/2] Настройка окружения и запуск backend...
+
+:: === ЗАГРУЗКА MSVC C++ КОМПИЛЯТОРА ===
+:: Note: Verify this path. It might be \Community\ or \Enterprise\ instead of \BuildTools\ depending on what you installed.
+call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+
 cd /d D:\Media\Code\Impala\Impala\impala-app\backend
 
 :: Прописываем нужные пути (ffmpeg и colmap)
