@@ -24,12 +24,14 @@ app.add_middleware(
 
 UPLOAD_DIR = "uploads"
 EXPORT_DIR = "exports"
-PROJECTS_FILE = "projects.json"
+PROJECTS_FILE = os.path.join("data", "projects.json")
 os.makedirs(EXPORT_DIR, exist_ok=True)
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs("projects_assets", exist_ok=True)
+os.makedirs("data", exist_ok=True)
 
 app.mount("/exports", StaticFiles(directory=EXPORT_DIR), name="exports")
-app.mount("/projects_assets", StaticFiles(directory="projects_assets", html=True), name="projects_assets")
+app.mount("/projects_assets", StaticFiles(directory="projects_assets"), name="projects_assets")
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 if not os.path.exists(PROJECTS_FILE):
@@ -212,8 +214,12 @@ def save_project_settings(project_id: str, settings: SaveSettings):
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # Merge only the fields that were actually sent (non-None)
-    payload = settings.model_dump(exclude_none=True)
+    # Merge fields, allowing explicit nulls to clear values
+    payload = settings.model_dump()
+    # Filter out only fields that weren't actually in the SaveSettings model (if any defaults)
+    # but we want to keep things that were sent as null.
+    # Pydantic's model_dump(exclude_unset=True) is better here.
+    payload = settings.model_dump(exclude_unset=True)
     project.update(payload)
     project["lastOpened"] = datetime.now().strftime("%Y-%m-%d")
 
@@ -221,6 +227,33 @@ def save_project_settings(project_id: str, settings: SaveSettings):
         json.dump(projects, f, indent=4)
 
     return {"status": "saved", "project_id": project_id}
+
+@app.post("/api/projects/{project_id}/model")
+async def upload_project_model(project_id: str, file: UploadFile = File(...)):
+    """Upload a custom 3D model (.glb/.gltf) to the project's assets."""
+    # Create project-specific asset directory
+    project_assets_dir = os.path.join("projects_assets", project_id)
+    os.makedirs(project_assets_dir, exist_ok=True)
+    
+    # Optional: Clean up old models to save space
+    for old_file in os.listdir(project_assets_dir):
+        try:
+            os.remove(os.path.join(project_assets_dir, old_file))
+        except:
+            pass
+            
+    # Save file
+    safe_filename = file.filename.replace(" ", "_")
+    file_path = os.path.join(project_assets_dir, safe_filename)
+    
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    return {
+        "status": "success",
+        "url": f"http://localhost:8000/projects_assets/{project_id}/{safe_filename}",
+        "name": file.filename
+    }
 
 class CropRequest(BaseModel):
     inverse_matrix: list[float]

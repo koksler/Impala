@@ -35,6 +35,6 @@ call .\venv\Scripts\activate
 
 :: Запускаем сервер
 echo Все пути настроены. Стартуем uvicorn!
-uvicorn main:app --reload --reload-include "*.py" --reload-exclude "projects.json" --reload-exclude "*.json" --reload-exclude "*.ply" --reload-exclude "*.mp4" --no-access-log
+python -m uvicorn --no-access-log --reload --reload-exclude projects.json --reload-exclude exports --reload-exclude uploads --reload-exclude processed_data main:app
 
 pause

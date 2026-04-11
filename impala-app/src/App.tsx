@@ -29,8 +29,9 @@ export default function App() {
       // ── Global shortcuts — intercept BEFORE the input focus guard ──
       // Without this, Ctrl+S with focus on a number input lets the browser
       // fire its native "Save Page" dialog, causing a full-page reload.
-      if (ctrl && e.key.toLowerCase() === 's') {
+      if (ctrl && (e.code === 'KeyS' || e.key.toLowerCase() === 's')) {
         e.preventDefault();
+        e.stopPropagation();
         // Only save when a project is open — not on the home page
         if (useStore.getState().activeProjectId) {
           useStore.getState().saveCurrentProject();
@@ -39,6 +40,7 @@ export default function App() {
       }
       if (ctrl && e.key.toLowerCase() === 'z') {
         e.preventDefault();
+        e.stopPropagation();
         console.log(e.shiftKey ? 'Redo triggered' : 'Undo triggered');
         return;
       }

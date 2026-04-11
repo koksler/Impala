@@ -61,15 +61,40 @@ export const CameraSync = () => {
         camera.matrix.copy(worldCameraMatrix);
         camera.matrixWorldNeedsUpdate = true;
         
+        // ─── Projection sync ───────────────────────────────────────
+        // Apply FOV derived from COLMAP/Nerfstudio intrinsics and the
+        // aspect ratio from the source video so the 3D overlay matches
+        // the background video frame exactly.
+        const perspCam = camera as THREE.PerspectiveCamera;
+        perspCam.fov = cameraFov;
         if (videoDimensions) {
-            const aspect = videoDimensions.width / videoDimensions.height;
-            if ((camera as THREE.PerspectiveCamera).aspect !== aspect) {
-                (camera as THREE.PerspectiveCamera).aspect = aspect;
-                (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
-            }
+            perspCam.aspect = videoDimensions.width / videoDimensions.height;
         }
+        // Must be called once after *both* fov and aspect are set.
+        perspCam.updateProjectionMatrix();
     
       }, [currentFrame, cameraData, camera, cameraEnabled, cameraFov, videoDimensions, scenePos, sceneRot, sceneScale]);
+
+    // ─── Resize guard ─────────────────────────────────────────────────────────
+    // R3F's built-in resize handler calls renderer.setSize() which can
+    // silently reset the PerspectiveCamera's aspect to the canvas ratio.
+    // We re-enforce our video-derived fov+aspect on every window resize.
+    useEffect(() => {
+        if (!cameraEnabled) return;
+
+        const perspCam = camera as THREE.PerspectiveCamera;
+
+        const handleResize = () => {
+            perspCam.fov = cameraFov;
+            if (videoDimensions) {
+                perspCam.aspect = videoDimensions.width / videoDimensions.height;
+            }
+            perspCam.updateProjectionMatrix();
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, [camera, cameraEnabled, cameraFov, videoDimensions]);
   
     return null;
 };

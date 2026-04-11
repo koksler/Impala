@@ -1,5 +1,56 @@
 [
     {
+        "id": "cb308b2a-60cd-465e-8ab8-fcd1aa114607",
+        "title": "New 3D Scene",
+        "lastOpened": "2026-04-11",
+        "img": "/projects_assets/default_thumb.webp",
+        "splat_url": "http://localhost:8000/exports/cb308b2a-60cd-465e-8ab8-fcd1aa114607/splat.ply",
+        "cameras_url": "http://localhost:8000/api/projects/cb308b2a-60cd-465e-8ab8-fcd1aa114607/cameras",
+        "video_url": "http://localhost:8000/uploads/cb308b2a-60cd-465e-8ab8-fcd1aa114607.mp4",
+        "dataparser_transforms_url": "http://localhost:8000/api/projects/cb308b2a-60cd-465e-8ab8-fcd1aa114607/dataparser-transforms",
+        "objPos": [
+            0.0,
+            0.5,
+            0.0
+        ],
+        "objRot": [
+            0.0,
+            68.0,
+            0.0
+        ],
+        "objScale": [
+            1.0,
+            1.0,
+            1.0
+        ],
+        "scenePos": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "sceneRot": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "sceneScale": [
+            1.0,
+            1.0,
+            1.0
+        ],
+        "shadowOpacity": 0.4,
+        "shadowBlur": 0.5,
+        "shadowColor": "#313133",
+        "matRoughness": 0.2,
+        "matMetallic": 0.8,
+        "envIntensity": 1.0,
+        "envRotation": 0.0,
+        "envTint": "#ffffff",
+        "savedSplatUrl": "http://localhost:8000/exports/cb308b2a-60cd-465e-8ab8-fcd1aa114607/splat.ply",
+        "customModelUrl": "http://localhost:8000/projects_assets/cb308b2a-60cd-465e-8ab8-fcd1aa114607/model.glb",
+        "customModelName": "model.glb"
+    },
+    {
         "id": "4bb64e17-f17b-40a8-b2fa-6b5d71cedb8c",
         "title": "New 3D Scene",
         "lastOpened": "2026-04-11",

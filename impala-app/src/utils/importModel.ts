@@ -7,9 +7,45 @@ export const triggerModelImport = () => {
     input.onchange = (e) => {
         const file = (e.target as HTMLInputElement).files?.[0];
         if (file) {
-            const url = URL.createObjectURL(file);
-            useStore.getState().setCustomModelUrl(url);
-            useStore.getState().setCustomModelName(file.name);
+            // 1. Immediate preview using blob URL
+            const blobUrl = URL.createObjectURL(file);
+            const state = useStore.getState();
+            state.setCustomModelUrl(blobUrl);
+            state.setCustomModelName(file.name);
+
+            // 2. Background upload to backend for persistence
+            const projectId = state.activeProjectId;
+            if (projectId) {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const toastId = state.addToast('Uploading Model', `Uploading ${file.name}...`, 'process');
+
+                fetch(`/api/projects/${projectId}/model`, {
+                    method: 'POST',
+                    body: formData,
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Switch from temporary blob to permanent server URL
+                        state.setCustomModelUrl(data.url);
+                        state.updateToast(toastId, {
+                            type: 'success',
+                            title: 'Model Uploaded',
+                            message: `${file.name} is now persisted to the project.`
+                        });
+                    }
+                })
+                .catch(err => {
+                    console.error('[UPLOAD] Failed:', err);
+                    state.updateToast(toastId, {
+                        type: 'error',
+                        title: 'Upload Failed',
+                        message: 'Model will not be saved. Server error.'
+                    });
+                });
+            }
         }
         document.body.focus();
     };
