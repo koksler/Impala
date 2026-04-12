@@ -13,6 +13,7 @@ export interface Project {
     img: string;
     splat_url: string;
     transforms_url: string;
+    proxy_url?: string;
     dataparser_transforms_url?: string;
     video_url?: string;
     cameras_url?: string;

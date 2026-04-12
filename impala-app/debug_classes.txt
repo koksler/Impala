@@ -1,0 +1,105 @@
+class SplatBuffer {
+            const colorDestBase = (i - srcFrom + destFrom) * SplatBuffer.ColorComponentCount;
+            outColorArray[colorDestBase] = dataView[0];
+            outColorArray[colorDestBase + 1] = dataView[1];
+            outColorArray[colorDestBase + 2] = dataView[2];
+            outColorArray[colorDestBase + 3] = alpha;
+            const colorBase = rotationBase + bytesPerRotation;
+            const sphericalHarmonicsBase = colorBase + bytesPerColor;
+            copyBetweenBuffers(rgba.buffer, 0, sectionBuffer, colorBase, 4);
+      const color = getElementPropStorage(vertexElement, 'packed_color');
+      storageArrays['colorExtremes'] = {
+      storageArrays['color'] = color;
+                    rotationArray, colorExtremes, colorArray, outSplat) {
+      unpack8888(c, colorArray[index]);
+      if (colorExtremes.minR && colorExtremes.maxR) {
+        outSplat[OFFSET.FDC0] = clamp(Math.round(lerp(colorExtremes.minR[chunkIndex], colorExtremes.maxR[chunkIndex], c.x) * 255), 0, 255);
+      if (colorExtremes.minG && colorExtremes.maxG) {
+        outSplat[OFFSET.FDC1] = clamp(Math.round(lerp(colorExtremes.minG[chunkIndex], colorExtremes.maxG[chunkIndex], c.y) * 255), 0, 255);
+      if (colorExtremes.minB && colorExtremes.maxB) {
+        outSplat[OFFSET.FDC2] = clamp(Math.round(lerp(colorExtremes.minB[chunkIndex], colorExtremes.maxB[chunkIndex], c.z) * 255), 0, 255);
+    const { positionExtremes, scaleExtremes, colorExtremes, position, rotation, scale, color } =
+                                                        scale, scaleExtremes, rotation, colorExtremes, color, tempSplat);
+    const { positionExtremes, scaleExtremes, colorExtremes, position, rotation, scale, color } =
+                                                        scale, scaleExtremes, rotation, colorExtremes, color, tempSplat);
+    const { positionExtremes, scaleExtremes, colorExtremes, position, rotation, scale, color } =
+                                                        scaleExtremes, rotation, colorExtremes, color, newSplat);
+    const { positionExtremes, scaleExtremes, colorExtremes, position, rotation, scale, color } =
+        i, 0, position, positionExtremes, scale, scaleExtremes, rotation, colorExtremes, color, newSplat
+class SplatBufferGenerator {
+        if (unpackedSplat.color[0] !== undefined) {
+            newSplat[OFFSET_FDC0] = unpackedSplat.color[0];
+            newSplat[OFFSET_FDC1] = unpackedSplat.color[1];
+            newSplat[OFFSET_FDC2] = unpackedSplat.color[2];
+    if (packed.colors.length !== numPoints * 3) return false;
+        color: [],
+        // Splat color
+            splat.color[j] = Math.floor(((((packed.colors[i * 3 + j] / 255.0) - 0.5) / COLOR_SCALE) * SH_C0 + 0.5) * 255);
+        colors: new Uint8Array(numPoints * 3),
+        result.colors.set(uint8View.slice(currentOffset, currentOffset + result.colors.length));
+        currentOffset += result.colors.length;
+        // RGBA - colors (uint8)
+                color: #ffffff;
+                background-color: rgba(128, 128, 128, 0.75);
+                background-color: rgba(128, 128, 128, 0.75);
+                background-color: rgba(190, 190, 190, 0.75);
+                background-color: rgba(128, 128, 128, 0.75);
+                background-color: rgba(0, 200, 0, 0.75);
+                background-color: rgba(50, 50, 50, 0.85);
+                color: #dddddd;
+                radius = 0.1, color = 0xffff00, headLength = length * 0.2, headRadius = headLength * 0.2) {
+        this.line = new THREE.Mesh(lineGeometry, new THREE.MeshBasicMaterial({color: color, toneMapped: false}));
+        this.cone = new THREE.Mesh(coneGeometry, new THREE.MeshBasicMaterial({color: color, toneMapped: false}));
+    setColor( color ) {
+        this.line.material.color.set(color);
+        this.cone.material.color.set(color);
+                    vec4 color = texture2D(sourceColorTexture, vUv);
+                    gl_FragColor = vec4(color.rgb, color.a * 2.0);
+            const coneMaterial = new THREE.MeshBasicMaterial({color: 0xFFFFFF});
+            const planeMaterial = new THREE.MeshBasicMaterial({color: 0xffffff});
+        const createMesh = (color, position) => {
+            let sphereMesh = new THREE.Mesh(sphereGeometry, SceneHelper.buildDebugMaterial(color));
+    static buildDebugMaterial(color) {
+            uniform vec3 color;
+                gl_FragColor = vec4(color.rgb, 0.0);
+            'color': {
+                'value': new THREE.Color(color)
+    static buildFocusMarkerMaterial(color) {
+            uniform vec3 color;
+                gl_FragColor = vec4(color.rgb, alpha * opacity);
+            'color': {
+                'value': new THREE.Color(color)
+                vec3 color = vColor.rgb;
+                gl_FragColor = vec4(color.rgb, opacity);
+                getExtension( 'EXT_color_buffer_float' );
+            getExtension( 'EXT_color_buffer_half_float' );
+// but for now the work-around is to split the spherical harmonics into three textures (one for each color channel).
+class SplatMesh extends THREE.Mesh {
+        delete this.splatDataTextures.baseData.colors;
+        const colors = new Uint8Array(maxSplatCount * 4);
+        // set up centers/colors data texture
+        SplatMesh.updateCenterColorsPaddedData(0, splatCount - 1, centers, colors, paddedCentersCols);
+                'colors': colors,
+            // Use three textures for spherical harmonics data, one per color channel
+                                 this.splatDataTextures.baseData.colors, this.splatDataTextures.baseData.sphericalHarmonics, undefined,
+        // Update center & color data texture
+                                               this.splatDataTextures.baseData.colors, paddedCenterColors);
+            // Update for the case of spherical harmonics data split among three textures, one for each color channel
+        const glFormat = this.webGLUtils.convert(texture.format, texture.colorSpace);
+    static updateCenterColorsPaddedData(from, to, centers, colors, paddedCenterColors) {
+            const colorsBase = c * 4;
+            paddedCenterColors[centerColorsBase] = rgbaArrayToInteger(colors, colorsBase);
+     * @param {Uint8Array} colors Target storage for splat colors
+    fillSplatDataArrays(covariances, scales, rotations, centers, colors, sphericalHarmonics, applySceneTransform,
+            if (colors) splatBuffer.fillSplatColorArray(colors, scene.minimumAlpha, srcStart, srcEnd, destStart);
+     * Get the color for a splat.
+     * @param {THREE.Vector4} outColor THREE.Vector4 instance in which to store splat color
+            element.style.color = '#fff';
+            element.style.color = '#fff';
+    updateSplatMesh = function() {
+                        console.log('Centers/colors texture size: ' + centersColorsTextureSize.x + ' x ' + centersColorsTextureSize.y);
+        this.updateSplatMesh();
+        this.updateSplatMesh();
+            this.updateSplatMesh();
+    updateSplatMesh() {
+        material.colorWrite = false;

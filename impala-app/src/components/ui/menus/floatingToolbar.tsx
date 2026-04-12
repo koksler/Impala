@@ -19,7 +19,7 @@ export const FloatingToolbar: React.FC = () => {
     const { activeTool, setActiveTool, snapToGrid, setSnapToGrid, isCropping, setIsCropping } = useStore();
 
     const handleApplyCrop = async () => {
-        const { cropBox, activeProjectId, setActiveSplatUrl, addToast, updateToast, removeToast } = useStore.getState();
+        const { cropBox, activeProjectId, setActiveSplatUrl, addToast, updateToast } = useStore.getState();
 
         if (!activeProjectId) {
             addToast("Crop Error", "No active project ID.", "error");

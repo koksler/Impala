@@ -1,0 +1,136 @@
+        const splatBuffer = new SplatBuffer(unifiedBuffer);
+        return splatBuffer;
+        const splatBufferDataOffsetBytes = SplatBuffer.HeaderSizeBytes + SplatBuffer.SectionHeaderSizeBytes;
+        const splatBufferSizeBytes = splatBufferDataOffsetBytes + shDescriptor.BytesPerSplat * splatCount;
+        const outBuffer = new ArrayBuffer(splatBufferSizeBytes);
+            splatBuffer: new SplatBuffer(outBuffer, true),
+            splatBufferDataOffsetBytes
+      splatBuffer,
+      splatBufferDataOffsetBytes
+      const outBase = i * outBytesPerSplat + splatBufferDataOffsetBytes;
+      SplatBuffer.writeSplatDataToSectionBuffer(newSplat, splatBuffer.bufferData, outBase, 0, outSphericalHarmonicsDegree);
+    return splatBuffer;
+                splatBuffer,
+                splatBufferDataOffsetBytes
+                splatBuffer.bufferData, splatBufferDataOffsetBytes, outSphericalHarmonicsDegree
+            return splatBuffer;
+        const splatBufferGenerator = SplatBufferGenerator.getStandardGenerator(minimumAlpha, compressionLevel,
+        return splatBufferGenerator.generateFromUncompressedSplatArray(splatData);
+        const splatBufferDataOffsetBytes = SplatBuffer.HeaderSizeBytes + SplatBuffer.SectionHeaderSizeBytes;
+                            const splatBufferSizeBytes = splatBufferDataOffsetBytes + shDescriptor.BytesPerSplat * maxSplatCount;
+                            directLoadBufferOut = new ArrayBuffer(splatBufferSizeBytes);
+                                const outOffset = processedBaseSplatCount * shDesc.BytesPerSplat + splatBufferDataOffsetBytes;
+            const splatBufferGenerator = SplatBufferGenerator.getStandardGenerator(minimumAlpha, compressionLevel,
+            return splatBufferGenerator.generateFromUncompressedSplatArray(splatArray);
+                splatBuffer,
+                splatBufferDataOffsetBytes
+            unpackGaussians(packed, outSphericalHarmonicsDegree, true, splatBuffer.bufferData, splatBufferDataOffsetBytes);
+            return splatBuffer;
+        const splatBufferGenerator = SplatBufferGenerator.getStandardGenerator(minimumAlpha, compressionLevel,
+        return splatBufferGenerator.generateFromUncompressedSplatArray(splatData);
+                const splatBufferSizeBytes = splatDataOffsetBytes + bytesPerSplat * maxSplatCount;
+                    directLoadBufferOut = new ArrayBuffer(splatBufferSizeBytes);
+            return loadPromise.then((splatBuffer) => {
+                return splatBuffer;
+        return function(splatBuffer, fileName) {
+            const blob = new Blob([splatBuffer.bufferData], {
+    constructor(splatBuffer, position = new THREE.Vector3(), quaternion = new THREE.Quaternion(),
+        this.splatBuffer = splatBuffer;
+                        const splatCount = scene.splatBuffer.getSplatCount();
+     * @param {Array<THREE.Matrix4>} splatBuffers SplatBuffer instances containing splats for each scene
+    static buildScenes(parentObject, splatBuffers, sceneOptions) {
+        scenes.length = splatBuffers.length;
+        for (let i = 0; i < splatBuffers.length; i++) {
+            const splatBuffer = splatBuffers[i];
+            const scene = SplatMesh.createScene(splatBuffer, position, rotation, scale,
+    static createScene(splatBuffer, position, rotation, scale, minimumAlpha, opacity = 1.0, visible = true) {
+        return new SplatScene(splatBuffer, position, rotation, scale, minimumAlpha, opacity, visible);
+     * @param {Array<SplatBuffer>} splatBuffers Instances of SplatBuffer off which to build the maps
+    static buildSplatIndexMaps(splatBuffers) {
+        for (let s = 0; s < splatBuffers.length; s++) {
+            const splatBuffer = splatBuffers[s];
+            const maxSplatCount = splatBuffer.getMaxSplatCount();
+     * @param {Array<SplatBuffer>} splatBuffers The base splat data, instances of SplatBuffer
+    build(splatBuffers, sceneOptions, keepSceneTransforms = true, finalBuild = false,
+        const maxSplatCount = SplatMesh.getTotalMaxSplatCountForSplatBuffers(splatBuffers);
+        const newScenes = SplatMesh.buildScenes(this, splatBuffers, sceneOptions);
+        for (let splatBuffer of splatBuffers) {
+            const splatBufferSphericalHarmonicsDegree = splatBuffer.getMinSphericalHarmonicsDegree();
+            if (splatBufferSphericalHarmonicsDegree < minSphericalHarmonicsDegree) {
+                minSphericalHarmonicsDegree = splatBufferSphericalHarmonicsDegree;
+        let splatBuffersChanged = false;
+        if (splatBuffers.length !== this.lastBuildScenes.length) {
+            splatBuffersChanged = true;
+            for (let i = 0; i < splatBuffers.length; i++) {
+                const splatBuffer = splatBuffers[i];
+                if (splatBuffer !== this.lastBuildScenes[i].splatBuffer) {
+                    splatBuffersChanged = true;
+            splatBuffersChanged) {
+            const indexMaps = SplatMesh.buildSplatIndexMaps(splatBuffers);
+        const splatBufferSplatCount = this.getSplatCount(true);
+        this.lastBuildSplatCount = splatBufferSplatCount;
+                const splatBuffer = this.scenes[s].splatBuffer;
+                    splatBuffer.minSphericalHarmonicsCoeff;
+                    splatBuffer.maxSphericalHarmonicsCoeff;
+            const splatBuffer = scene.splatBuffer;
+            if (i === 0 || splatBuffer.compressionLevel > maxCompressionLevel) {
+                maxCompressionLevel = splatBuffer.compressionLevel;
+            const splatBuffer = scene.splatBuffer;
+            if (i === 0 || splatBuffer.compressionLevel < minCompressionLevel) {
+                minCompressionLevel = splatBuffer.compressionLevel;
+                avgCenter.add(scene.splatBuffer.sceneCenter);
+            if (scene && scene.splatBuffer) totalSplatCount += scene.splatBuffer.getSplatCount();
+    static getTotalSplatCountForSplatBuffers(splatBuffers) {
+        for (let splatBuffer of splatBuffers) totalSplatCount += splatBuffer.getSplatCount();
+            if (scene && scene.splatBuffer) totalSplatCount += scene.splatBuffer.getMaxSplatCount();
+    static getTotalMaxSplatCountForSplatBuffers(splatBuffers) {
+        for (let splatBuffer of splatBuffers) totalSplatCount += splatBuffer.getMaxSplatCount();
+        paramsObj.splatBuffer = this.getSplatBufferForSplat(globalIndex);
+            const splatBuffer = scene.splatBuffer;
+                splatBuffer.fillSplatCovarianceArray(covariances, sceneTransform, srcStart, srcEnd, destStart, covarianceCompressionLevel);
+                splatBuffer.fillSplatScaleRotationArray(scales, rotations, sceneTransform,
+            if (centers) splatBuffer.fillSplatCenterArray(centers, sceneTransform, srcStart, srcEnd, destStart);
+            if (colors) splatBuffer.fillSplatColorArray(colors, scene.minimumAlpha, srcStart, srcEnd, destStart);
+                splatBuffer.fillSphericalHarmonicsArray(sphericalHarmonics, this.minSphericalHarmonicsDegree,
+            destStart += splatBuffer.getSplatCount();
+            paramsObj.splatBuffer.getSplatCenter(paramsObj.localIndex, outCenter, paramsObj.sceneTransform);
+            paramsObj.splatBuffer.getSplatScaleAndRotation(paramsObj.localIndex, outScale, outRotation,
+            paramsObj.splatBuffer.getSplatColor(paramsObj.localIndex, outColor);
+        return this.getScene(this.globalSplatIndexToSceneIndexMap[globalIndex]).splatBuffer;
+            splatCount = this.scenes[sceneIndex].splatBuffer.getSplatCount();
+class Viewer {
+    addSplatSceneDownloadPromise(promise) {
+    addSplatScene(path, options = {}) {
+            console.log('addSplatScene(): "progressiveLoad" option ignore because there are multiple splat scenes');
+        const splatBuffersAddedUIUpdate = (firstBuild, finalBuild) => {
+        const buildSection = (splatBuffer, firstBuild, finalBuild) => {
+            return this.addSplatBuffers([splatBuffer], [addSplatBufferOptions],
+                splatBuffersAddedUIUpdate(firstBuild, finalBuild);
+        downloadPromise.then((splatBuffer) => {
+            return buildFunc(splatBuffer, true, true).then(() => {
+            downloadAndBuildPromise.reject(this.updateError(e, `Viewer::addSplatScene -> Could not load file ${path}`));
+        this.addSplatSceneDownloadPromise(downloadPromise);
+                buildFunc(queuedBuild.splatBuffer, queuedBuild.firstBuild, queuedBuild.finalBuild)
+        const onProgressiveLoadSectionProgress = (splatBuffer, finalBuild) => {
+                    splatBuffer.getSplatCount() > queuedProgressiveLoadSectionBuilds[0].splatBuffer.getSplatCount()) {
+                        splatBuffer,
+        this.addSplatSceneDownloadPromise(splatSceneDownloadPromise);
+            const error = this.updateError(e, `Viewer::addSplatScene -> Could not load one or more scenes`);
+    addSplatScenes(sceneOptions, showLoadingUI = true, onProgress = undefined) {
+            .then((splatBuffers) => {
+                this.addSplatBuffers(splatBuffers, sceneOptions, true, showLoadingUI, showLoadingUI, false, false).then(() => {
+                reject(this.updateError(e, `Viewer::addSplatScenes -> Could not load one or more splat scenes.`));
+        this.addSplatSceneDownloadPromise(downloadAndBuildPromise);
+        return function(splatBuffers, splatBufferOptions = [], finalBuild = true, showLoadingUI = true,
+                        const buildResults = this.addSplatBuffersToMesh(splatBuffers, splatBufferOptions, finalBuild,
+     * @param {Array<SplatBuffer>} splatBuffers SplatBuffer instances
+     * @param {Array<object>} splatBufferOptions Array of options objects: {
+        return function(splatBuffers, splatBufferOptions, finalBuild = true, showLoadingUIForSplatTreeBuild = false,
+                allSplatBuffers = this.splatMesh.scenes.map((scene) => scene.splatBuffer) || [];
+            allSplatBuffers.push(...splatBuffers);
+            allSplatBufferOptions.push(...splatBufferOptions);
+                        savedSplatBuffers.push(scene.splatBuffer);
+    addSplatScene(path, options = {}) {
+        return this.viewer.addSplatScene(path, options);
+    addSplatScenes(sceneOptions, showLoadingUI) {
+        return this.viewer.addSplatScenes(sceneOptions, showLoadingUI);

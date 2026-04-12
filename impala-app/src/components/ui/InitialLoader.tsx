@@ -1,7 +1,7 @@
 import React from 'react';
 import { useStore } from '../../store';
 import { ImpalaLogoIcon } from '../icons';
-import { ProgressBar } from './progressBar';
+
 
 export const InitialLoader: React.FC = () => {
     const { isAppLoading } = useStore();

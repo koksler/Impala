@@ -5,14 +5,14 @@ import { useStore } from '../../store';
 
 export const GltfCamera = ({ url }: { url: string }) => {
   const { scene, animations } = useGLTF(url);
-  const { setThree } = useThree();
-  const { actions, mixer } = useAnimations(animations, scene);
-  const { currentFrame, totalFrames, isPlaying } = useStore();
+  const { set } = useThree();
+  const { mixer } = useAnimations(animations, scene);
+  const { currentFrame, totalFrames } = useStore();
 
   useEffect(() => {
-    const glbCamera = scene.getObjectByName('camera_0') || scene.children.find(c => c.isCamera);
+    const glbCamera = scene.getObjectByName('camera_0') || scene.children.find(c => (c as any).isCamera);
     if (glbCamera) {
-      setThree({ camera: glbCamera });
+      set({ camera: glbCamera as any });
     }
   }, [scene]);
 

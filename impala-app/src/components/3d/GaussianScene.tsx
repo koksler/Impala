@@ -35,7 +35,7 @@ export const GaussianScene: React.FC<GaussianSceneProps> = React.memo(({ url, vi
             progress: 100 
         });
       })
-      .catch(err => {
+      .catch((err: any) => {
         console.error("Splat load error:", err);
         const { updateToast } = useStore.getState();
         updateToast("loading-project", { 

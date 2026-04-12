@@ -1,0 +1,12 @@
+getSplatColor(globalSplatIndex, outColor) {
+            const sectionIndex = this.globalSplatIndexToSectionMap[globalSplatIndex];
+            const section = this.sections[sectionIndex];
+            const localSplatIndex = globalSplatIndex - section.splatCountOffset;
+
+            const srcSplatColorsBase = section.bytesPerSplat * localSplatIndex +
+                                       SplatBuffer.CompressionLevels[this.compressionLevel].ColorOffsetBytes;
+            const splatColorsArray = new Uint8Array(this.bufferData, section.dataBase + srcSplatColorsBase, 4);
+
+            outColor.set(splatColorsArray[0], splatColorsArray[1],
+                         splatColorsArray[2], splatColorsArray[3]);
+        }

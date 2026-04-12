@@ -25,6 +25,8 @@ export const Header: React.FC<HeaderProps> = ({
     onGoHome
 }) => {
     const saveCurrentProject = useStore(s => s.saveCurrentProject);
+    const exportVideo = useStore(s => s.exportVideo);
+    const isExporting = useStore(s => s.isExporting);
 
     return (
         <header className="relative w-full h-[60px] px-[16px] py-[10px] flex items-center justify-between bg-bg border-b border-bg-border text-base text-text-main">
@@ -71,8 +73,8 @@ export const Header: React.FC<HeaderProps> = ({
 
                         {/* Export Action */}
                         <Tooltip content="Export Project" position="bottom">
-                            <Button variant="accent">
-                                Export
+                            <Button variant="accent" onClick={exportVideo} disabled={isExporting}>
+                                {isExporting ? 'Exporting...' : 'Export'}
                             </Button>
                         </Tooltip>
 

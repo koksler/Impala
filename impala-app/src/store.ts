@@ -121,13 +121,13 @@ interface AppState {
     setBakedEnvTexture: (texture: import('three').Texture | null) => void;
     bakedEnvPreview: string | null;
     setBakedEnvPreview: (preview: string | null) => void;
-    isBakingEnv: boolean;
-    setIsBakingEnv: (isBaking: boolean) => void;
 
     activeProjectId: string | null;
     setActiveProjectId: (id: string | null) => void;
     activeSplatUrl: string | null;
     setActiveSplatUrl: (url: string | null) => void;
+    activeProxyUrl: string | null;
+    setActiveProxyUrl: (url: string | null) => void;
 
     toasts: Toast[];
     addToast: (title: string, message: string, type: ToastType, id?: string) => string;
@@ -136,6 +136,10 @@ interface AppState {
 
     isAppLoading: boolean;
     setIsAppLoading: (loading: boolean) => void;
+
+    isExporting: boolean;
+    setIsExporting: (exporting: boolean) => void;
+    exportVideo: () => Promise<void>;
 
     saveCurrentProject: () => Promise<void>;
     loadProjectSettings: (projectData: Record<string, any>) => void;
@@ -254,13 +258,13 @@ export const useStore = create<AppState>((set) => ({
     setBakedEnvTexture: (bakedEnvTexture) => set({ bakedEnvTexture }),
     bakedEnvPreview: null,
     setBakedEnvPreview: (bakedEnvPreview) => set({ bakedEnvPreview }),
-    isBakingEnv: false,
-    setIsBakingEnv: (isBakingEnv) => set({ isBakingEnv }),
 
     activeProjectId: null,
     setActiveProjectId: (activeProjectId) => set({ activeProjectId }),
     activeSplatUrl: null,
     setActiveSplatUrl: (activeSplatUrl) => set({ activeSplatUrl }),
+    activeProxyUrl: null,
+    setActiveProxyUrl: (activeProxyUrl) => set({ activeProxyUrl }),
 
     setPlaying: (isPlaying) => set({ isPlaying }),
     setCurrentFrame: (currentFrame) => set({ currentFrame }),
@@ -305,6 +309,116 @@ export const useStore = create<AppState>((set) => ({
 
     isAppLoading: true,
     setIsAppLoading: (isAppLoading) => set({ isAppLoading }),
+
+    isExporting: false,
+    setIsExporting: (isExporting) => set({ isExporting }),
+
+    exportVideo: async () => {
+        const state = useStore.getState();
+        if (!state.activeProjectId || !state.videoElement || state.totalFrames === 0) return;
+
+        state.setIsExporting(true);
+        state.setPlaying(false);
+
+        const toastId = state.addToast('Exporting Video', 'Preparing to render...', 'process', 'export-video');
+
+        const { activeProjectId, totalFrames, videoDimensions, fps } = state;
+        const width = videoDimensions?.width || 1920;
+        const height = videoDimensions?.height || 1080;
+
+        const mergeCanvas = document.createElement('canvas');
+        mergeCanvas.width = width;
+        mergeCanvas.height = height;
+        const ctx = mergeCanvas.getContext('2d');
+
+        // Locate the Three.js WebGL canvas
+        let glCanvas = document.querySelector('canvas[data-engine^="three.js"]') as HTMLCanvasElement;
+        if (!glCanvas) {
+            const canvases = document.querySelectorAll('canvas');
+            canvases.forEach(c => {
+                const gl = c.getContext('webgl2') || c.getContext('webgl');
+                if (gl) glCanvas = c;
+            });
+        }
+
+        if (!ctx || !glCanvas) {
+            state.addToast('Export Error', 'Could not locate rendering contexts.', 'error');
+            state.setIsExporting(false);
+            return;
+        }
+
+        try {
+            for (let i = 0; i < totalFrames; i++) {
+                // Update frame state - this updates the CameraSync instantly
+                useStore.getState().setCurrentFrame(i);
+                
+                // Wait for React Three Fiber to apply the new camera transform
+                await new Promise<void>((resolve) => {
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => resolve());
+                    });
+                });
+
+                ctx.clearRect(0, 0, width, height);
+                // Draw ONLY the 3D scene (WebP will be transparent)
+                ctx.drawImage(glCanvas, 0, 0, width, height);
+
+                const blob = await new Promise<Blob | null>(resolve => mergeCanvas.toBlob(resolve, 'image/webp', 0.9));
+                
+                if (blob) {
+                    const formData = new FormData();
+                    formData.append('frame', blob, `frame_${i}.webp`);
+                    
+                    await fetch(`/api/projects/${activeProjectId}/export/frame?index=${i}`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                }
+                
+                state.updateToast(toastId, {
+                    message: `Rendering frame ${i + 1} of ${totalFrames}...`,
+                    progress: Math.floor((i / totalFrames) * 100)
+                });
+            }
+
+            state.updateToast(toastId, {
+                message: 'Stitching video with FFmpeg...',
+                progress: 100
+            });
+
+            const res = await fetch(`/api/projects/${activeProjectId}/export/finalize?fps=${fps || 24}`, {
+                method: 'POST'
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                state.updateToast(toastId, {
+                    type: 'success',
+                    title: 'Export Complete',
+                    message: 'Video has been successfully exported.'
+                });
+
+                const a = document.createElement('a');
+                a.href = data.url;
+                a.download = data.filename || 'export.mp4';
+                a.target = '_blank';
+                a.rel = 'noopener noreferrer';
+                a.click();
+            } else {
+                throw new Error('Finalize failed on server');
+            }
+
+        } catch (error) {
+            console.error('[EXPORT]', error);
+            state.updateToast(toastId, {
+                type: 'error',
+                title: 'Export Failed',
+                message: 'An error occurred during video export.'
+            });
+        } finally {
+            state.setIsExporting(false);
+        }
+    },
 
     saveCurrentProject: async () => {
         const state = useStore.getState();

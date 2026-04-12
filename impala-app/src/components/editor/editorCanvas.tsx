@@ -7,9 +7,10 @@ import * as THREE from 'three';
 import { CameraSync } from '../3d/CameraSync';
 import { CameraPath } from '../3d/CameraPath';
 import { CustomModel } from '../3d/CustomModel';
-import { EnvironmentBaker } from '../3d/EnvironmentBaker';
+import { ProxyMesh } from '../3d/ProxyMesh';
+import { useMemo } from 'react';
 
-export const EditorCanvas = ({ splatUrl }: { splatUrl?: string }) => {
+export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyUrl?: string }) => {
   const { 
     showModels, showGrid, showSplat, showCameraPath, cameraEnabled, isPlaying,
     activeTool, objPos, objRot, objScale, setObjPos, setObjRot, setObjScale,
@@ -17,18 +18,27 @@ export const EditorCanvas = ({ splatUrl }: { splatUrl?: string }) => {
     shadowOpacity, shadowBlur, shadowColor,
     envIntensity, envRotation, envTint, snapToGrid,
     cropBox, setCropBox, isCropping, customModelUrl,
-    bakedEnvTexture
+    bakedEnvTexture, isExporting
   } = useStore();
   
   const [cube, setCube] = useState<THREE.Object3D | null>(null);
   const [sceneGroupWrapper, setSceneGroupWrapper] = useState<THREE.Group | null>(null);
   const [cropCube, setCropCube] = useState<THREE.Mesh | null>(null);
+  const videoElement = useStore(state => state.videoElement);
+
+  const videoEnvTexture = useMemo(() => {
+    if (!videoElement) return null;
+    const tex = new THREE.VideoTexture(videoElement);
+    tex.mapping = THREE.EquirectangularReflectionMapping;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }, [videoElement]);
 
   return (
     <Canvas 
       className="w-full h-full absolute inset-0 z-10 pointer-events-auto" 
       camera={{ position: [0, 2, 5], fov: 45 }} 
-      gl={{ alpha: true }}
+      gl={{ alpha: true, preserveDrawingBuffer: true }}
       shadows
     >
       <ambientLight intensity={0.5} />
@@ -43,11 +53,13 @@ export const EditorCanvas = ({ splatUrl }: { splatUrl?: string }) => {
 
       <Suspense fallback={null}>
         <group ref={(node) => setSceneGroupWrapper(node)} position={scenePos} rotation={sceneRot} scale={sceneScale}>
-          <GaussianScene url={splatUrl} visible={showSplat} />
-          {showCameraPath && <CameraPath />}
+          <GaussianScene url={splatUrl} visible={!isExporting && showSplat} />
+          {/* Real-world geometry proxy handling shadows and occlusion mask! */}
+          <ProxyMesh url={proxyUrl} isExporting={isExporting} />
+          {!isExporting && showCameraPath && <CameraPath />}
         </group>
 
-        {transformTarget === 'scene' && !isCropping && (activeTool === 'translate' || activeTool === 'rotate' || activeTool === 'scale') && sceneGroupWrapper && (
+        {!isExporting && transformTarget === 'scene' && !isCropping && (activeTool === 'translate' || activeTool === 'rotate' || activeTool === 'scale') && sceneGroupWrapper && (
           <TransformControls 
             object={sceneGroupWrapper}
             mode={activeTool} 
@@ -64,7 +76,7 @@ export const EditorCanvas = ({ splatUrl }: { splatUrl?: string }) => {
           />
         )}
 
-        {transformTarget === 'object' && showModels && !isCropping && (activeTool === 'translate' || activeTool === 'rotate' || activeTool === 'scale') && cube && (
+        {!isExporting && transformTarget === 'object' && showModels && !isCropping && (activeTool === 'translate' || activeTool === 'rotate' || activeTool === 'scale') && cube && (
           <TransformControls 
             object={cube}
             mode={activeTool} 
@@ -83,7 +95,7 @@ export const EditorCanvas = ({ splatUrl }: { splatUrl?: string }) => {
 
         <group position={[0, -1.5, 0]}>
           
-          {isCropping && (
+          {!isExporting && isCropping && (
             <>
               <mesh ref={(node) => setCropCube(node)} position={cropBox.position} rotation={cropBox.rotation} scale={cropBox.scale} renderOrder={999}>
                 <boxGeometry args={[1, 1, 1]} />
@@ -110,31 +122,34 @@ export const EditorCanvas = ({ splatUrl }: { splatUrl?: string }) => {
             </>
           )}
 
-          {!cameraEnabled && showGrid && (
+          {!isExporting && !cameraEnabled && showGrid && (
             <Grid infiniteGrid fadeDistance={50} sectionColor="#FF763B" cellColor="#666666" />
           )}
 
           {showModels && customModelUrl && (
-            <group ref={(node) => setCube(node)} position={objPos} rotation={objRot} scale={objScale}>
+            <group name="custom-model-group" ref={(node) => setCube(node)} position={objPos} rotation={objRot} scale={objScale}>
               <Suspense fallback={null}>
                 <CustomModel url={customModelUrl} />
               </Suspense>
             </group>
           )}
 
-          {/* Shadow Catcher */}
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-            <planeGeometry args={[100, 100]} />
-            <shadowMaterial transparent opacity={shadowOpacity} color={shadowColor} />
-          </mesh>
+          {/* Fallback Flat Shadow Catcher only active if proxy mesh falls back to none or user enforces it. Currently rely on ProxyMesh */}
+          {!proxyUrl && (
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
+              <planeGeometry args={[100, 100]} />
+              <shadowMaterial transparent opacity={shadowOpacity} color={shadowColor} />
+            </mesh>
+          )}
         </group>
 
-        {bakedEnvTexture ? (
+        {videoEnvTexture ? (
+             <Environment map={videoEnvTexture} environmentIntensity={envIntensity} environmentRotation={[0, envRotation * (Math.PI / 180), 0]} />
+        ) : bakedEnvTexture ? (
              <Environment map={bakedEnvTexture} environmentIntensity={envIntensity} environmentRotation={[0, envRotation * (Math.PI / 180), 0]} />
         ) : (
              <Environment files="/hdri/potsdamer_platz_1k.hdr" environmentIntensity={envIntensity} environmentRotation={[0, envRotation * (Math.PI / 180), 0]} />
         )}
-        <EnvironmentBaker />
       </Suspense>
 
       <CameraSync />

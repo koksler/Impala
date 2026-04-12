@@ -1,13 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Panel } from '../panel';
 import { Divider } from '../divider';
 import { SectionHeader } from '../sectionHeader';
 import { ValueInputRow } from '../inputs/valueInputRow';
 import { ColorPicker } from '../inputs/colorPicker';
-import { ProgressBar } from '../progressBar';
-import { Button } from '../buttons/buttons';
 import { Slider } from '../inputs/slider';
-import { Tooltip } from '../Tooltip';
 import { useStore } from '../../../store';
 
 import {
@@ -22,8 +19,7 @@ interface SceneSettingsPanelProps {
 }
 
 export const SceneSettingsPanel: React.FC<SceneSettingsPanelProps> = ({ isMinimized }) => {
-    const { envIntensity, setEnvIntensity, envRotation, setEnvRotation, envTint, setEnvTint, setIsBakingEnv, setBakedEnvTexture, setBakedEnvPreview, bakedEnvPreview, videoOpacity, setVideoOpacity } = useStore();
-    const [bakeProgress, setBakeProgress] = useState<number>(0); 
+    const { envIntensity, setEnvIntensity, envRotation, setEnvRotation, envTint, setEnvTint, videoOpacity, setVideoOpacity } = useStore();
 
     return (
         <Panel className={isMinimized ? "h-fit w-[280px] pb-[20px]" : "h-full flex flex-col w-[280px] pb-[12px]"}>
@@ -83,60 +79,7 @@ export const SceneSettingsPanel: React.FC<SceneSettingsPanelProps> = ({ isMinimi
                     <ColorPicker color={envTint} onChange={setEnvTint} />
                 </div>
 
-                <div className="px-[12px] mt-[15px]">
-                    <Tooltip content="Revert to default environment" position="top">
-                        <Button variant="full" onClick={() => {
-                            setBakedEnvTexture(null);
-                            setBakedEnvPreview(null);
-                        }}>Reset Environment</Button>
-                    </Tooltip>
-                </div>
-
                 <Divider />
-
-                {/* Preview Baking */}
-                <SectionHeader title="Preview Baking" />
-
-                <div className="flex flex-col gap-[8px] px-[12px] mt-[10px]">
-                    <span className="font-sans text-[12px] text-text-main">
-                        Baking status: {bakeProgress === 100 ? "Finished" : bakeProgress > 0 ? "Baking..." : "Unfinished"}
-                    </span>
-                    <ProgressBar progress={bakeProgress} />
-                </div>
-
-                <div className="flex flex-col gap-[8px] px-[12px] mt-[15px]">
-                    <Tooltip content="Apply and bake changes" position="top">
-                        <Button variant="full" onClick={() => {
-                            setBakeProgress(0);
-                            const interval = setInterval(() => {
-                                setBakeProgress(p => {
-                                    if (p >= 100) {
-                                        clearInterval(interval);
-                                        setIsBakingEnv(true);
-                                        return 100;
-                                    }
-                                    return p + 20;
-                                });
-                            }, 100);
-                        }}>Bake with current settings</Button>
-                    </Tooltip>
-                    <Tooltip content="Generate a new environment map" position="top">
-                        <Button variant="full" onClick={() => setIsBakingEnv(true)}>Regenerate environment</Button>
-                    </Tooltip>
-                </div>
-                
-                <div className="px-[12px] mt-[15px]">
-                    <span className="font-sans text-[12px] text-text-main mb-[8px] block">HDRI Preview</span>
-                    {bakedEnvPreview ? (
-                        <div className="w-full h-[120px] rounded-[6px] overflow-hidden border border-border-secondary bg-bg-surface">
-                            <img src={bakedEnvPreview} alt="HDRI Preview" className="w-full h-full object-cover" />
-                        </div>
-                    ) : (
-                        <div className="w-full h-[120px] rounded-[6px] overflow-hidden border border-border-secondary bg-bg-surface flex items-center justify-center">
-                            <span className="text-[12px] text-text-muted">No baked map</span>
-                        </div>
-                    )}
-                </div>
             </div>
             )}
         </Panel>
