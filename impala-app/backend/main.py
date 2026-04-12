@@ -11,6 +11,20 @@ import glob
 import numpy as np
 from plyfile import PlyData, PlyElement
 from pydantic import BaseModel
+import subprocess
+from routers.exporter import router as exporter_router
+
+def get_video_framerate(video_path: str) -> str:
+    cmd = [
+        "ffprobe", "-v", "error", "-select_streams", "v:0",
+        "-show_entries", "stream=r_frame_rate",
+        "-of", "default=noprint_wrappers=1:nokey=1", video_path
+    ]
+    try:
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, text=True, check=True)
+        return result.stdout.strip()
+    except Exception:
+        return "25" # safe European fallback if ffprobe fails
 
 app = FastAPI(title="Impala Backend Core")
 
@@ -21,6 +35,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(exporter_router)
 
 UPLOAD_DIR = "uploads"
 EXPORT_DIR = "exports"
@@ -97,6 +113,7 @@ def background_pipeline(file_path: str, project_id: str, title: str):
             "lastOpened": datetime.now().strftime("%Y-%m-%d"),
             "img": "/projects_assets/default_thumb.webp",
             "splat_url": f"http://localhost:8000/exports/{project_id}/splat.ply",
+            "proxy_url": f"http://localhost:8000/exports/{project_id}/mesh.obj",
             "cameras_url": f"http://localhost:8000/api/projects/{project_id}/cameras",
             "video_url": f"http://localhost:8000/uploads/{upload_filename}",
             "dataparser_transforms_url": f"http://localhost:8000/api/projects/{project_id}/dataparser-transforms",
@@ -253,54 +270,4 @@ async def upload_project_model(project_id: str, file: UploadFile = File(...)):
         "status": "success",
         "url": f"http://localhost:8000/projects_assets/{project_id}/{safe_filename}",
         "name": file.filename
-    }
-
-class CropRequest(BaseModel):
-    inverse_matrix: list[float]
-
-@app.post("/api/projects/{project_id}/crop")
-async def crop_project(project_id: str, req: CropRequest):
-    input_ply = os.path.join(EXPORT_DIR, project_id, "splat.ply")
-    
-    # We always crop from the original splat.ply to prevent compounding/intersection of previously cropped slices.
-    existing_crops = glob.glob(os.path.join(EXPORT_DIR, project_id, "splat_cropped_*.ply"))
-        
-    random_id = uuid.uuid4().hex[:8]
-    output_filename = f"splat_cropped_{random_id}.ply"
-    output_ply = os.path.join(EXPORT_DIR, project_id, output_filename)
-    
-    # Convert JS column-major 16-element array to 4x4 numpy matrix
-    inv_matrix = np.array(req.inverse_matrix).reshape(4, 4).T
-    
-    plydata = PlyData.read(input_ply)
-    v_data = plydata['vertex'].data
-    
-    # Extract positions
-    x = v_data['x']
-    y = v_data['y']
-    z = v_data['z']
-    
-    # Create 4xN matrix for multiplication (x, y, z, 1)
-    pts = np.vstack((x, y, z, np.ones_like(x)))
-    transformed_pts = inv_matrix @ pts
-    
-    # Check bounds (-0.5 to 0.5 in local crop space)
-    tx, ty, tz = transformed_pts[0, :], transformed_pts[1, :], transformed_pts[2, :]
-    mask = (tx >= -0.5) & (tx <= 0.5) & (ty >= -0.5) & (ty <= 0.5) & (tz >= -0.5) & (tz <= 0.5)
-    
-    # Filter and save
-    new_v_data = v_data[mask]
-    new_plydata = PlyData([PlyElement.describe(new_v_data, 'vertex')], text=False)
-    new_plydata.write(output_ply)
-    
-    # Clean up old crops
-    for old_crop in existing_crops:
-        try:
-            os.remove(old_crop)
-        except OSError:
-            pass
-            
-    return {
-       "status": "success", 
-       "new_url": f"http://localhost:8000/exports/{project_id}/{output_filename}"
     }

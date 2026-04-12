@@ -128,6 +128,25 @@ def run_nerfstudio_pipeline(video_path: str, project_id: str, progress_callback=
         print(f"[PHASE 3] .ply Export failed: {e}")
         return False
 
+    # Phase 3.5: Export 3D Mesh (.obj) for proxy occlusion and shadows
+    print(f"[PHASE 3.5] Exporting proxy mesh for VFX compositing...")
+    if progress_callback: progress_callback(94)
+
+    poisson_export_cmd = [
+        ns_export_exe, "poisson",
+        "--load-config", latest_config,
+        "--output-dir", export_dir,
+        "--target-num-faces", "50000",
+        "--normal-method", "open3d"
+    ]
+
+    try:
+        subprocess.run(poisson_export_cmd, check=True, env=my_env)
+        print(f"[PHASE 3.5] Proxy Mesh exported successfully.")
+    except subprocess.CalledProcessError as e:
+        print(f"[PHASE 3.5] Proxy Mesh export failed: {e}")
+        # We don't return False here because the mesh is optional. The splat can still be viewed.
+
     # Phase 4: Export Camera Trajectory
     print(f"[PHASE 4] Exporting Camera Trajectory to GLB/JSON...")
     if progress_callback: progress_callback(96)
