@@ -1,4 +1,4 @@
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment, TransformControls, Grid } from '@react-three/drei';
 import { GaussianScene } from '../3d/GaussianScene';
@@ -19,7 +19,9 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
     shadowOpacity, shadowBlur, shadowColor,
     envIntensity, envRotation, envTint, snapToGrid,
     cropBox, setCropBox, isCropping, customModelUrl,
-    bakedEnvTexture, isExporting
+    bakedEnvTexture, isExporting,
+    // Add export pipeline dependencies
+    currentFrame, totalFrames, setPlaying, updateToast, preExportState
   } = useStore();
   
   const [cube, setCube] = useState<THREE.Object3D | null>(null);
@@ -55,24 +57,24 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
         intensity={envIntensity} 
         color={envTint !== '#ffffff' && envTint !== '#FFFFFF' ? envTint : undefined} 
         castShadow 
-        shadow-mapSize={[4096, 4096]} 
+        shadow-mapSize={[2048, 2048]} 
         shadow-camera-left={-2}
         shadow-camera-right={2}
         shadow-camera-top={2}
         shadow-camera-bottom={-2}
         shadow-camera-near={0.5}
         shadow-camera-far={50}
-        shadow-bias={-0.0005}
+        shadow-bias={-0.001}
         shadow-normalBias={0.02}
         shadow-radius={shadowBlur * 15}
       />
 
       <Suspense fallback={null}>
         <group ref={(node) => setSceneGroupWrapper(node)} position={scenePos} rotation={sceneRot} scale={sceneScale}>
-          <GaussianScene url={splatUrl} visible={!isExporting && showSplat} />
+          <GaussianScene url={splatUrl} visible={showSplat} />
           {/* Real-world geometry proxy handling shadows and occlusion mask! */}
           <ProxyMesh url={proxyUrl} isExporting={isExporting} />
-          {!isExporting && showCameraPath && <CameraPath />}
+          {showCameraPath && <CameraPath />}
         </group>
 
         {!isExporting && transformTarget === 'scene' && !isCropping && (activeTool === 'translate' || activeTool === 'rotate' || activeTool === 'scale') && sceneGroupWrapper && (
@@ -150,9 +152,14 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
             </group>
           )}
 
-          {/* Reliable Flat Shadow Catcher: Snaps directly to the object's physical lowest geometry elevation! */}
-          <mesh renderOrder={998} rotation={[-Math.PI / 2, 0, 0]} position={[0, objPos[1] + (localModelLowestY * objScale[1]) + 0.001, 0]} receiveShadow>
-              <planeGeometry args={[100, 100]} />
+          {/* Improved Shadow Catcher: Now a circle with explicit renderOrder for better occlusion by proxies */}
+          <mesh 
+            renderOrder={0} // Render at the same level as models
+            rotation={[-Math.PI / 2, 0, 0]} 
+            position={[objPos[0], objPos[1] + (localModelLowestY * objScale[1]) + 0.001, objPos[2]]} 
+            receiveShadow
+          >
+              <circleGeometry args={[15, 64]} />
               <shadowMaterial transparent opacity={shadowOpacity} color={shadowColor} />
             </mesh>
         </group>

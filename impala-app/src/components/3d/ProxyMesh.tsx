@@ -42,7 +42,7 @@ export const ProxyMesh: React.FC<ProxyMeshProps> = ({ url, isExporting }) => {
                     depthWrite: false, 
                     colorWrite: true
                 });
-                shadowMesh.renderOrder = 999; // Ensure shadow mask renders AFTER splats to tint them
+                shadowMesh.renderOrder = 1; // Render after Teto (0) but respect depth buffer
                 holdoutGroup.add(shadowMesh);
 
                 // 2. Depth Occluder (Invisible, perfectly writes depth BEFORE anything else so Teto is blocked)

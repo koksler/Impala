@@ -136,11 +136,11 @@ interface AppState {
     updateToast: (id: string, updates: Partial<Toast>) => void;
     removeToast: (id: string) => void;
 
-    isAppLoading: boolean;
     setIsAppLoading: (loading: boolean) => void;
-
+    preExportState: any;
     isExporting: boolean;
     setIsExporting: (exporting: boolean) => void;
+    startExportPipeline: () => void;
     exportVideo: () => Promise<void>;
 
     saveCurrentProject: () => Promise<void>;
@@ -314,19 +314,34 @@ export const useStore = create<AppState>((set) => ({
     isAppLoading: true,
     setIsAppLoading: (isAppLoading) => set({ isAppLoading }),
 
+    preExportState: null,
     isExporting: false,
     setIsExporting: (isExporting) => set({ isExporting }),
+
+    startExportPipeline: () => {
+        const state = useStore.getState();
+        state.exportVideo();
+    },
 
     exportVideo: async () => {
         const state = useStore.getState();
         if (!state.activeProjectId || !state.videoElement || state.totalFrames === 0) return;
+
+        // Save current state to restore later
+        const preExportState = {
+            cameraEnabled: state.cameraEnabled,
+            showGrid: state.showGrid,
+            activeTool: state.activeTool,
+            isPlaying: state.isPlaying,
+            currentFrame: state.currentFrame,
+        };
 
         state.setIsExporting(true);
         state.setPlaying(false);
 
         const toastId = state.addToast('Exporting Video', 'Preparing to render...', 'process', 'export-video');
 
-        const { activeProjectId, totalFrames, videoDimensions, fps } = state;
+        const { activeProjectId, totalFrames, videoDimensions, fps, videoElement, videoOpacity } = state;
         const width = videoDimensions?.width || 1920;
         const height = videoDimensions?.height || 1080;
 
@@ -352,22 +367,48 @@ export const useStore = create<AppState>((set) => ({
         }
 
         try {
+            // Force export settings
+            set({
+                cameraEnabled: true,
+                showGrid: false,
+                activeTool: 'hand'
+            });
+
+            const duration = videoElement.duration;
+
             for (let i = 0; i < totalFrames; i++) {
                 // Update frame state - this updates the CameraSync instantly
                 useStore.getState().setCurrentFrame(i);
                 
-                // Wait for React Three Fiber to apply the new camera transform
+                // Sync video element to this frame precisely
+                const progress = i / (totalFrames - 1);
+                videoElement.currentTime = progress * duration;
+
+                // Wait for both video seek and React Three Fiber to apply the new camera transform
                 await new Promise<void>((resolve) => {
-                    requestAnimationFrame(() => {
-                        requestAnimationFrame(() => resolve());
-                    });
+                    const checkReady = () => {
+                        if (videoElement.readyState >= 3) { // HAVE_FUTURE_DATA
+                            requestAnimationFrame(() => {
+                                requestAnimationFrame(() => resolve());
+                            });
+                        } else {
+                            setTimeout(checkReady, 10);
+                        }
+                    };
+                    checkReady();
                 });
 
                 ctx.clearRect(0, 0, width, height);
-                // Draw ONLY the 3D scene (WebP will be transparent)
-                ctx.drawImage(glCanvas, 0, 0, width, height);
 
-                const blob = await new Promise<Blob | null>(resolve => mergeCanvas.toBlob(resolve, 'image/webp', 0.9));
+                // 1. Draw the Video Background (Now as the actual background!)
+                ctx.globalAlpha = 1.0;
+                ctx.drawImage(videoElement, 0, 0, width, height);
+                
+                // 2. Overlay the 3D scene (Splats, Models, Shadows)
+                // Use default alpha so models are sharp and opaque on top of the video
+                ctx.drawImage(glCanvas, 0, 0, width, height); 
+
+                const blob = await new Promise<Blob | null>(resolve => mergeCanvas.toBlob(resolve, 'image/webp', 1.0));
                 
                 if (blob) {
                     const formData = new FormData();
@@ -420,7 +461,15 @@ export const useStore = create<AppState>((set) => ({
                 message: 'An error occurred during video export.'
             });
         } finally {
-            state.setIsExporting(false);
+            // Restore state
+            set({
+                cameraEnabled: preExportState.cameraEnabled,
+                showGrid: preExportState.showGrid,
+                activeTool: preExportState.activeTool,
+                isPlaying: preExportState.isPlaying,
+                currentFrame: preExportState.currentFrame,
+                isExporting: false
+            });
         }
     },
 
