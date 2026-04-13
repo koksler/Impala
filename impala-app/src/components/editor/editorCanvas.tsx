@@ -26,6 +26,7 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
   const [sceneGroupWrapper, setSceneGroupWrapper] = useState<THREE.Group | null>(null);
   const [localModelLowestY, setLocalModelLowestY] = useState<number>(0);
   const [cropCube, setCropCube] = useState<THREE.Mesh | null>(null);
+  const lightTarget = useMemo(() => new THREE.Object3D(), []);
   const videoElement = useStore(state => state.videoElement);
 
   const videoEnvTexture = useMemo(() => {
@@ -41,22 +42,28 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
       className="w-full h-full absolute inset-0 z-10 pointer-events-auto" 
       camera={{ position: [0, 2, 5], fov: 45 }} 
       gl={{ alpha: true, preserveDrawingBuffer: true }}
-      shadows
+      shadows={{ type: THREE.PCFSoftShadowMap }}
+      onCreated={({ scene }) => {
+        scene.add(lightTarget);
+      }}
     >
+      <primitive object={lightTarget} position={objPos} />
       <ambientLight intensity={0.5} />
       <directionalLight 
-        position={[5, 10, 5]} 
+        position={[objPos[0] + 5, objPos[1] + 10, objPos[2] + 5]} 
+        target={lightTarget}
         intensity={envIntensity} 
         color={envTint !== '#ffffff' && envTint !== '#FFFFFF' ? envTint : undefined} 
         castShadow 
         shadow-mapSize={[4096, 4096]} 
-        shadow-camera-left={-20}
-        shadow-camera-right={20}
-        shadow-camera-top={20}
-        shadow-camera-bottom={-20}
+        shadow-camera-left={-2}
+        shadow-camera-right={2}
+        shadow-camera-top={2}
+        shadow-camera-bottom={-2}
         shadow-camera-near={0.5}
         shadow-camera-far={50}
-        shadow-bias={-0.0001}
+        shadow-bias={-0.0005}
+        shadow-normalBias={0.02}
         shadow-radius={shadowBlur * 15}
       />
 
@@ -144,7 +151,7 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
           )}
 
           {/* Reliable Flat Shadow Catcher: Snaps directly to the object's physical lowest geometry elevation! */}
-          <mesh renderOrder={998} rotation={[-Math.PI / 2, 0, 0]} position={[0, objPos[1] + (localModelLowestY * objScale[1]), 0]} receiveShadow>
+          <mesh renderOrder={998} rotation={[-Math.PI / 2, 0, 0]} position={[0, objPos[1] + (localModelLowestY * objScale[1]) + 0.001, 0]} receiveShadow>
               <planeGeometry args={[100, 100]} />
               <shadowMaterial transparent opacity={shadowOpacity} color={shadowColor} />
             </mesh>
