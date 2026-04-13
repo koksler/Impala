@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { useLoader } from '@react-three/fiber';
 import { OBJLoader } from 'three-stdlib';
 import * as THREE from 'three';
+import { useStore } from '../../store';
 
 interface ProxyMeshProps {
     url?: string;
@@ -9,6 +10,8 @@ interface ProxyMeshProps {
 }
 
 export const ProxyMesh: React.FC<ProxyMeshProps> = ({ url, isExporting }) => {
+    const { shadowOpacity, shadowColor } = useStore();
+
     if (!url) return null;
 
     // We catch the error safely if the mesh doesn't exist yet (e.g. older project)
@@ -33,11 +36,13 @@ export const ProxyMesh: React.FC<ProxyMeshProps> = ({ url, isExporting }) => {
                 shadowMesh.receiveShadow = true;
                 shadowMesh.castShadow = false;
                 shadowMesh.material = new THREE.ShadowMaterial({
-                    opacity: 0.5,
+                    opacity: shadowOpacity,
+                    color: new THREE.Color(shadowColor),
                     transparent: true,
                     depthWrite: false, 
                     colorWrite: true
                 });
+                shadowMesh.renderOrder = 999; // Ensure shadow mask renders AFTER splats to tint them
                 holdoutGroup.add(shadowMesh);
 
                 // 2. Depth Occluder (Invisible, perfectly writes depth BEFORE anything else so Teto is blocked)
@@ -54,7 +59,7 @@ export const ProxyMesh: React.FC<ProxyMeshProps> = ({ url, isExporting }) => {
         });
 
         return holdoutGroup;
-    }, [obj]);
+    }, [obj, shadowOpacity, shadowColor]);
 
     if (!clonedObj) return null;
 

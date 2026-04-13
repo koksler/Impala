@@ -8,6 +8,7 @@ import { CameraSync } from '../3d/CameraSync';
 import { CameraPath } from '../3d/CameraPath';
 import { CustomModel } from '../3d/CustomModel';
 import { ProxyMesh } from '../3d/ProxyMesh';
+import { EnvironmentBaker } from '../3d/EnvironmentBaker';
 import { useMemo } from 'react';
 
 export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyUrl?: string }) => {
@@ -23,6 +24,7 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
   
   const [cube, setCube] = useState<THREE.Object3D | null>(null);
   const [sceneGroupWrapper, setSceneGroupWrapper] = useState<THREE.Group | null>(null);
+  const [localModelLowestY, setLocalModelLowestY] = useState<number>(0);
   const [cropCube, setCropCube] = useState<THREE.Mesh | null>(null);
   const videoElement = useStore(state => state.videoElement);
 
@@ -47,7 +49,14 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
         intensity={envIntensity} 
         color={envTint !== '#ffffff' && envTint !== '#FFFFFF' ? envTint : undefined} 
         castShadow 
-        shadow-mapSize={[1024, 1024]} 
+        shadow-mapSize={[4096, 4096]} 
+        shadow-camera-left={-20}
+        shadow-camera-right={20}
+        shadow-camera-top={20}
+        shadow-camera-bottom={-20}
+        shadow-camera-near={0.5}
+        shadow-camera-far={50}
+        shadow-bias={-0.0001}
         shadow-radius={shadowBlur * 15}
       />
 
@@ -129,27 +138,26 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
           {showModels && customModelUrl && (
             <group name="custom-model-group" ref={(node) => setCube(node)} position={objPos} rotation={objRot} scale={objScale}>
               <Suspense fallback={null}>
-                <CustomModel url={customModelUrl} />
+                <CustomModel url={customModelUrl} onLowestPoint={setLocalModelLowestY} />
               </Suspense>
             </group>
           )}
 
-          {/* Fallback Flat Shadow Catcher only active if proxy mesh falls back to none or user enforces it. Currently rely on ProxyMesh */}
-          {!proxyUrl && (
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
+          {/* Reliable Flat Shadow Catcher: Snaps directly to the object's physical lowest geometry elevation! */}
+          <mesh renderOrder={998} rotation={[-Math.PI / 2, 0, 0]} position={[0, objPos[1] + (localModelLowestY * objScale[1]), 0]} receiveShadow>
               <planeGeometry args={[100, 100]} />
               <shadowMaterial transparent opacity={shadowOpacity} color={shadowColor} />
             </mesh>
-          )}
         </group>
 
-        {videoEnvTexture ? (
-             <Environment map={videoEnvTexture} environmentIntensity={envIntensity} environmentRotation={[0, envRotation * (Math.PI / 180), 0]} />
-        ) : bakedEnvTexture ? (
+        {bakedEnvTexture ? (
              <Environment map={bakedEnvTexture} environmentIntensity={envIntensity} environmentRotation={[0, envRotation * (Math.PI / 180), 0]} />
+        ) : videoEnvTexture ? (
+             <Environment map={videoEnvTexture} environmentIntensity={envIntensity} environmentRotation={[0, envRotation * (Math.PI / 180), 0]} />
         ) : (
              <Environment files="/hdri/potsdamer_platz_1k.hdr" environmentIntensity={envIntensity} environmentRotation={[0, envRotation * (Math.PI / 180), 0]} />
         )}
+        <EnvironmentBaker />
       </Suspense>
 
       <CameraSync />

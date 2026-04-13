@@ -5,6 +5,8 @@ import { SectionHeader } from '../sectionHeader';
 import { ValueInputRow } from '../inputs/valueInputRow';
 import { ColorPicker } from '../inputs/colorPicker';
 import { Slider } from '../inputs/slider';
+import { Button } from '../buttons/buttons';
+import { Tooltip } from '../Tooltip';
 import { useStore } from '../../../store';
 
 import {
@@ -19,7 +21,7 @@ interface SceneSettingsPanelProps {
 }
 
 export const SceneSettingsPanel: React.FC<SceneSettingsPanelProps> = ({ isMinimized }) => {
-    const { envIntensity, setEnvIntensity, envRotation, setEnvRotation, envTint, setEnvTint, videoOpacity, setVideoOpacity } = useStore();
+    const { envIntensity, setEnvIntensity, envRotation, setEnvRotation, envTint, setEnvTint, videoOpacity, setVideoOpacity, setIsBakingEnv, bakedEnvPreview } = useStore();
 
     return (
         <Panel className={isMinimized ? "h-fit w-[280px] pb-[20px]" : "h-full flex flex-col w-[280px] pb-[12px]"}>
@@ -80,6 +82,25 @@ export const SceneSettingsPanel: React.FC<SceneSettingsPanelProps> = ({ isMinimi
                 </div>
 
                 <Divider />
+
+                <div className="px-[12px] mt-[15px]">
+                    <span className="font-sans text-[12px] text-text-main mb-[8px] block">HDRI Preview</span>
+                    {bakedEnvPreview ? (
+                        <div className="w-full h-[120px] rounded-[6px] overflow-hidden border border-border-secondary bg-bg-surface">
+                            <img src={bakedEnvPreview} alt="HDRI Preview" className="w-full h-full object-cover" />
+                        </div>
+                    ) : (
+                        <div className="w-full h-[120px] rounded-[6px] overflow-hidden border border-border-secondary bg-bg-surface flex items-center justify-center">
+                            <span className="text-[12px] text-text-muted">No baked map</span>
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex flex-col gap-[8px] px-[12px] mt-[15px]">
+                    <Tooltip content="Extracts environment lighting directly from the real-world splat" position="top">
+                        <Button variant="full" onClick={() => setIsBakingEnv(true)}>Make HDRI preview</Button>
+                    </Tooltip>
+                </div>
             </div>
             )}
         </Panel>

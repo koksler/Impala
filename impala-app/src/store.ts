@@ -121,6 +121,8 @@ interface AppState {
     setBakedEnvTexture: (texture: import('three').Texture | null) => void;
     bakedEnvPreview: string | null;
     setBakedEnvPreview: (preview: string | null) => void;
+    isBakingEnv: boolean;
+    setIsBakingEnv: (val: boolean) => void;
 
     activeProjectId: string | null;
     setActiveProjectId: (id: string | null) => void;
@@ -258,6 +260,8 @@ export const useStore = create<AppState>((set) => ({
     setBakedEnvTexture: (bakedEnvTexture) => set({ bakedEnvTexture }),
     bakedEnvPreview: null,
     setBakedEnvPreview: (bakedEnvPreview) => set({ bakedEnvPreview }),
+    isBakingEnv: false,
+    setIsBakingEnv: (isBakingEnv) => set({ isBakingEnv }),
 
     activeProjectId: null,
     setActiveProjectId: (activeProjectId) => set({ activeProjectId }),
