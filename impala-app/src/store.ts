@@ -1,7 +1,8 @@
 import { create } from 'zustand';
+import * as THREE from 'three';
 
 /** The 3x4 applied_transform matrix + scale from nerfstudio's dataparser_transforms.json.
- *  This aligns raw camera poses (transforms.json) with the exported .ply splat space. */
+ * This aligns raw camera poses (transforms.json) with the exported .ply splat space. */
 export interface DataparserTransform {
     transform: number[][];  // 3x4 row-major matrix
     scale: number;
@@ -32,11 +33,9 @@ interface AppState {
     cameraFov: number;
     setCameraData: (data: CameraFrame[], fov: number) => void;
 
-    /** Nerfstudio dataparser applied_transform — aligns camera poses with splat space */
     dataparsedTransform: DataparserTransform | null;
     setDataparserTransform: (t: DataparserTransform) => void;
 
-    /** When false, CameraSync is bypassed and OrbitControls is active */
     cameraEnabled: boolean;
 
     showVideo: boolean;
@@ -62,7 +61,6 @@ interface AppState {
     videoDimensions: { width: number; height: number } | null;
     setVideoDimensions: (width: number, height: number) => void;
 
-    // Tool Mode
     activeTool: string;
     setActiveTool: (tool: string) => void;
     
@@ -84,7 +82,6 @@ interface AppState {
     };
     setCropBox: (transform: Partial<{ position: [number, number, number], rotation: [number, number, number], scale: [number, number, number] }>) => void;
 
-    // Object Transform
     objPos: [number, number, number];
     objRot: [number, number, number];
     objScale: [number, number, number];
@@ -97,7 +94,6 @@ interface AppState {
     customModelName: string | null;
     setCustomModelName: (name: string | null) => void;
 
-    // Material/Shadows
     shadowOpacity: number;
     shadowBlur: number;
     shadowColor: string;
@@ -109,7 +105,6 @@ interface AppState {
     setMatRoughness: (val: number) => void;
     setMatMetallic: (val: number) => void;
 
-    // Environment
     envIntensity: number;
     envRotation: number;
     envTint: string;
@@ -124,12 +119,18 @@ interface AppState {
     isBakingEnv: boolean;
     setIsBakingEnv: (val: boolean) => void;
 
+    threeContext: { gl: any, scene: any, camera: any } | null;
+    setThreeContext: (gl: any, scene: any, camera: any) => void;
+
     activeProjectId: string | null;
     setActiveProjectId: (id: string | null) => void;
     activeSplatUrl: string | null;
     setActiveSplatUrl: (url: string | null) => void;
     activeProxyUrl: string | null;
     setActiveProxyUrl: (url: string | null) => void;
+    
+    objBounds: [number, number, number];
+    setObjBounds: (bounds: [number, number, number]) => void;    
 
     toasts: Toast[];
     addToast: (title: string, message: string, type: ToastType, id?: string) => string;
@@ -162,9 +163,7 @@ export const useStore = create<AppState>((set) => ({
 
     checkServerStatus: async () => {
         try {
-            const response = await fetch("/api/status", {
-            });
-
+            const response = await fetch("/api/status");
             if (response.ok) {
                 set({ serverStatus: 'online' });
             } else {
@@ -263,12 +262,18 @@ export const useStore = create<AppState>((set) => ({
     isBakingEnv: false,
     setIsBakingEnv: (isBakingEnv) => set({ isBakingEnv }),
 
+    threeContext: null,
+    setThreeContext: (gl, scene, camera) => set({ threeContext: { gl, scene, camera } }),
+
     activeProjectId: null,
     setActiveProjectId: (activeProjectId) => set({ activeProjectId }),
     activeSplatUrl: null,
     setActiveSplatUrl: (activeSplatUrl) => set({ activeSplatUrl }),
     activeProxyUrl: null,
     setActiveProxyUrl: (activeProxyUrl) => set({ activeProxyUrl }),
+    
+    objBounds: [1, 1, 1],
+    setObjBounds: (objBounds) => set({ objBounds }),    
 
     setPlaying: (isPlaying) => set({ isPlaying }),
     setCurrentFrame: (currentFrame) => set({ currentFrame }),
@@ -327,149 +332,171 @@ export const useStore = create<AppState>((set) => ({
         const state = useStore.getState();
         if (!state.activeProjectId || !state.videoElement || state.totalFrames === 0) return;
 
-        // Save current state to restore later
+        const { gl, scene, camera } = state.threeContext || {};
+        if (!gl || !scene || !camera) return;
+
         const preExportState = {
             cameraEnabled: state.cameraEnabled,
             showGrid: state.showGrid,
             activeTool: state.activeTool,
             isPlaying: state.isPlaying,
             currentFrame: state.currentFrame,
+            showSplat: state.showSplat,
         };
 
         state.setIsExporting(true);
         state.setPlaying(false);
 
-        const toastId = state.addToast('Exporting Video', 'Preparing to render...', 'process', 'export-video');
+        const toastId = state.addToast('Exporting Video', 'Initializing render pipeline...', 'process', 'export-video');
 
-        const { activeProjectId, totalFrames, videoDimensions, fps, videoElement, videoOpacity } = state;
+        const { activeProjectId, totalFrames, videoDimensions, fps, videoElement, cameraData } = state;
         const width = videoDimensions?.width || 1920;
         const height = videoDimensions?.height || 1080;
 
-        const mergeCanvas = document.createElement('canvas');
-        mergeCanvas.width = width;
-        mergeCanvas.height = height;
-        const ctx = mergeCanvas.getContext('2d');
-
-        // Locate the Three.js WebGL canvas
         let glCanvas = document.querySelector('canvas[data-engine^="three.js"]') as HTMLCanvasElement;
-        if (!glCanvas) {
-            const canvases = document.querySelectorAll('canvas');
-            canvases.forEach(c => {
-                const gl = c.getContext('webgl2') || c.getContext('webgl');
-                if (gl) glCanvas = c;
-            });
-        }
 
-        if (!ctx || !glCanvas) {
-            state.addToast('Export Error', 'Could not locate rendering contexts.', 'error');
-            state.setIsExporting(false);
-            return;
-        }
+        // --- THE PHOTOSHOP CANVASES ---
+        const tetoCanvas = document.createElement('canvas'); tetoCanvas.width = width; tetoCanvas.height = height;
+        const tetoCtx = tetoCanvas.getContext('2d')!;
+
+        const maskCanvas = document.createElement('canvas'); maskCanvas.width = width; maskCanvas.height = height;
+        const maskCtx = maskCanvas.getContext('2d')!;
+
+        const finalCanvas = document.createElement('canvas'); finalCanvas.width = width; finalCanvas.height = height;
+        const finalCtx = finalCanvas.getContext('2d')!;
+
+        const oldAutoClear = gl.autoClear;
+        const oldBg = scene.background;
+        const WORLD_ROTATION = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
 
         try {
-            // Force export settings
-            set({
-                cameraEnabled: true,
-                showGrid: false,
-                activeTool: 'hand'
-            });
-
-            const duration = videoElement.duration;
+            set({ cameraEnabled: true, showGrid: false, activeTool: 'hand' });
+            gl.autoClear = false;
+            
+            const modelsGroup = scene.getObjectByName('custom-model-group');
+            const shadowCatcher = scene.getObjectByName('shadow-catcher');
+            const splatViewer = useStore.getState().splatViewer;
 
             for (let i = 0; i < totalFrames; i++) {
-                // Update frame state - this updates the CameraSync instantly
                 useStore.getState().setCurrentFrame(i);
                 
-                // Sync video element to this frame precisely
-                const progress = i / (totalFrames - 1);
-                videoElement.currentTime = progress * duration;
+                // 1. Sync Video
+                videoElement.currentTime = (totalFrames > 1 ? i / (totalFrames - 1) : 0) * videoElement.duration;
+                await new Promise<void>(res => { const check = () => videoElement.readyState >= 3 ? res() : setTimeout(check, 10); check(); });
 
-                // Wait for both video seek and React Three Fiber to apply the new camera transform
-                await new Promise<void>((resolve) => {
-                    const checkReady = () => {
-                        if (videoElement.readyState >= 3) { // HAVE_FUTURE_DATA
-                            requestAnimationFrame(() => {
-                                requestAnimationFrame(() => resolve());
-                            });
-                        } else {
-                            setTimeout(checkReady, 10);
-                        }
-                    };
-                    checkReady();
-                });
+                // 2. Sync Camera
+                if (cameraData && cameraData[i]) {
+                    const raw = cameraData[i].transform || cameraData[i].camera_to_world || cameraData[i].transform_matrix;
+                    if (raw) {
+                        const f = Array.isArray(raw[0]) ? raw.flat() : raw;
+                        const mat = new THREE.Matrix4().set(f[0], f[1], f[2], f[3], f[4], f[5], f[6], f[7], f[8], f[9], f[10], f[11], 0, 0, 0, 1);
+                        const finalMatrix = new THREE.Matrix4().multiplyMatrices(WORLD_ROTATION, mat);
+                        const s = useStore.getState();
+                        const sceneTransform = new THREE.Matrix4().compose(
+                            new THREE.Vector3(...s.scenePos),
+                            new THREE.Quaternion().setFromEuler(new THREE.Euler(...s.sceneRot)),
+                            new THREE.Vector3(...s.sceneScale)
+                        );
+                        camera.matrixAutoUpdate = false;
+                        camera.matrix.copy(new THREE.Matrix4().multiplyMatrices(sceneTransform, finalMatrix));
+                        camera.updateMatrixWorld(true);
+                        (camera as THREE.PerspectiveCamera).fov = s.cameraFov;
+                        (camera as THREE.PerspectiveCamera).aspect = width / height;
+                        (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
+                    }
+                }
 
-                ctx.clearRect(0, 0, width, height);
+                // 3. Trigger Splat Worker
+                if (splatViewer) splatViewer.visible = true;
+                gl.render(scene, camera);
+                // CRITICAL: Give splat worker 60ms to mathematically sort points for the new camera angle
+                await new Promise(r => setTimeout(r, 60)); 
 
-                // 1. Draw the Video Background (Now as the actual background!)
-                ctx.globalAlpha = 1.0;
-                ctx.drawImage(videoElement, 0, 0, width, height);
+                scene.background = null;
+                gl.setClearColor(0x000000, 0); // Pure transparent
+
+                // ==========================================
+                // PASS 1: TETO ONLY
+                // ==========================================
+                if (splatViewer) splatViewer.visible = false;
+                if (shadowCatcher) shadowCatcher.visible = true;
+                if (modelsGroup) {
+                    modelsGroup.visible = true;
+                    modelsGroup.traverse((c: any) => { if (c.material) c.material.colorWrite = true; });
+                }
+
+                gl.clear(true, true, true);
+                gl.render(scene, camera);
+                tetoCtx.clearRect(0, 0, width, height);
+                tetoCtx.drawImage(glCanvas, 0, 0, width, height);
+
+                // ==========================================
+                // PASS 2: THE MASK (WITH DEPTH SHIELD)
+                // ==========================================
+                if (splatViewer) splatViewer.visible = true;
+                if (shadowCatcher) shadowCatcher.visible = false; // Don't erase her shadow
+                if (modelsGroup) {
+                    modelsGroup.visible = true;
+                    // Teto becomes invisible, but writes her 3D volume to the depth buffer to block the background walls!
+                    modelsGroup.traverse((c: any) => { if (c.material) c.material.colorWrite = false; });
+                }
+
+                gl.clear(true, true, true);
+                gl.render(scene, camera);
+                maskCtx.clearRect(0, 0, width, height);
+                maskCtx.drawImage(glCanvas, 0, 0, width, height);
+
+                // ==========================================
+                // PASS 3: 2D PHOTOSHOP COMPOSITE
+                // ==========================================
+                finalCtx.clearRect(0, 0, width, height);
                 
-                // 2. Overlay the 3D scene (Splats, Models, Shadows)
-                // Use default alpha so models are sharp and opaque on top of the video
-                ctx.drawImage(glCanvas, 0, 0, width, height); 
-
-                const blob = await new Promise<Blob | null>(resolve => mergeCanvas.toBlob(resolve, 'image/webp', 1.0));
+                // Base Layer: Teto
+                finalCtx.globalCompositeOperation = 'source-over';
+                finalCtx.drawImage(tetoCanvas, 0, 0, width, height);
                 
+                // Eraser Layer: Erase Teto where the Chair Splat exists
+                finalCtx.globalCompositeOperation = 'destination-out';
+                finalCtx.drawImage(maskCanvas, 0, 0, width, height);
+                
+                // Background Layer: Drop the pristine original video underneath
+                finalCtx.globalCompositeOperation = 'destination-over';
+                finalCtx.drawImage(videoElement, 0, 0, width, height);
+
+                // Upload Frame
+                const blob = await new Promise<Blob | null>(resolve => finalCanvas.toBlob(resolve, 'image/webp', 1.0));
                 if (blob) {
                     const formData = new FormData();
                     formData.append('frame', blob, `frame_${i}.webp`);
-                    
-                    await fetch(`/api/projects/${activeProjectId}/export/frame?index=${i}`, {
-                        method: 'POST',
-                        body: formData
-                    });
+                    await fetch(`/api/projects/${activeProjectId}/export/frame?index=${i}`, { method: 'POST', body: formData });
                 }
-                
+
                 state.updateToast(toastId, {
                     message: `Rendering frame ${i + 1} of ${totalFrames}...`,
-                    progress: Math.floor((i / totalFrames) * 100)
+                    progress: Math.floor((i / totalFrames) * 100),
                 });
             }
 
-            state.updateToast(toastId, {
-                message: 'Stitching video with FFmpeg...',
-                progress: 100
-            });
+            // Restore State
+            gl.autoClear = oldAutoClear;
+            scene.background = oldBg;
+            if (modelsGroup) modelsGroup.traverse((c: any) => { if (c.material) c.material.colorWrite = true; });
 
-            const res = await fetch(`/api/projects/${activeProjectId}/export/finalize?fps=${fps || 24}`, {
-                method: 'POST'
-            });
-
+            state.updateToast(toastId, { message: 'Stitching pristine video...', progress: 100 });
+            const res = await fetch(`/api/projects/${activeProjectId}/export/finalize?fps=${fps || 24}`, { method: 'POST' });
             if (res.ok) {
                 const data = await res.json();
-                state.updateToast(toastId, {
-                    type: 'success',
-                    title: 'Export Complete',
-                    message: 'Video has been successfully exported.'
-                });
-
-                const a = document.createElement('a');
-                a.href = data.url;
-                a.download = data.filename || 'export.mp4';
-                a.target = '_blank';
-                a.rel = 'noopener noreferrer';
-                a.click();
-            } else {
-                throw new Error('Finalize failed on server');
-            }
+                state.updateToast(toastId, { type: 'success', title: 'Export Complete', message: 'Video exported.' });
+                const a = document.createElement('a'); a.href = data.url; a.download = data.filename; a.click();
+            } else throw new Error('Finalize failed');
 
         } catch (error) {
             console.error('[EXPORT]', error);
-            state.updateToast(toastId, {
-                type: 'error',
-                title: 'Export Failed',
-                message: 'An error occurred during video export.'
-            });
+            state.updateToast(toastId, { type: 'error', title: 'Export Failed', message: 'Check console.' });
+            gl.autoClear = oldAutoClear; scene.background = oldBg;
         } finally {
-            // Restore state
-            set({
-                cameraEnabled: preExportState.cameraEnabled,
-                showGrid: preExportState.showGrid,
-                activeTool: preExportState.activeTool,
-                isPlaying: preExportState.isPlaying,
-                currentFrame: preExportState.currentFrame,
-                isExporting: false
-            });
+            camera.matrixAutoUpdate = true;
+            set({ ...preExportState, isExporting: false });
         }
     },
 
@@ -499,10 +526,7 @@ export const useStore = create<AppState>((set) => ({
             envIntensity: state.envIntensity,
             envRotation: state.envRotation,
             envTint: state.envTint,
-            // Save the active splat URL so cropped splat files are restored
             savedSplatUrl: state.activeSplatUrl,
-            // Blob URLs are ephemeral (session-scoped) — never persist them.
-            // The user must re-import the model file after reopening the project.
             customModelUrl: state.customModelUrl?.startsWith('blob:') ? null : state.customModelUrl,
             customModelName: state.customModelUrl?.startsWith('blob:') ? null : state.customModelName,
         };
@@ -537,33 +561,34 @@ export const useStore = create<AppState>((set) => ({
     loadProjectSettings: (projectData) => {
         const patch: Partial<AppState> = {};
 
-        if (Array.isArray(projectData.objPos))    patch.objPos    = projectData.objPos    as [number,number,number];
-        if (Array.isArray(projectData.objRot))    patch.objRot    = projectData.objRot    as [number,number,number];
-        if (Array.isArray(projectData.objScale))  patch.objScale  = projectData.objScale  as [number,number,number];
-        if (Array.isArray(projectData.scenePos))  patch.scenePos  = projectData.scenePos  as [number,number,number];
-        if (Array.isArray(projectData.sceneRot))  patch.sceneRot  = projectData.sceneRot  as [number,number,number];
-        if (Array.isArray(projectData.sceneScale))patch.sceneScale= projectData.sceneScale as [number,number,number];
+        const arrayProps = ['objPos', 'objRot', 'objScale', 'scenePos', 'sceneRot', 'sceneScale'] as const;
+        arrayProps.forEach(key => {
+            if (Array.isArray(projectData[key])) {
+                patch[key] = projectData[key] as any;
+            }
+        });
 
-        if (projectData.shadowOpacity  != null) patch.shadowOpacity  = projectData.shadowOpacity;
-        if (projectData.shadowBlur     != null) patch.shadowBlur     = projectData.shadowBlur;
-        if (projectData.shadowColor    != null) patch.shadowColor    = projectData.shadowColor;
-        if (projectData.matRoughness   != null) patch.matRoughness   = projectData.matRoughness;
-        if (projectData.matMetallic    != null) patch.matMetallic    = projectData.matMetallic;
-        if (projectData.envIntensity   != null) patch.envIntensity   = projectData.envIntensity;
-        if (projectData.envRotation    != null) patch.envRotation    = projectData.envRotation;
-        if (projectData.envTint        != null) patch.envTint        = projectData.envTint;
+        const primitiveProps = [
+            'shadowOpacity', 'shadowBlur', 'shadowColor', 
+            'matRoughness', 'matMetallic', 
+            'envIntensity', 'envRotation', 'envTint'
+        ] as const;
+        
+        primitiveProps.forEach(key => {
+            if (projectData[key] != null) {
+                patch[key] = projectData[key] as any;
+            }
+        });
 
-        // Restore cropped splat URL if one was saved
-        if (projectData.savedSplatUrl  != null) patch.activeSplatUrl = projectData.savedSplatUrl;
+        if (projectData.savedSplatUrl != null) {
+            patch.activeSplatUrl = projectData.savedSplatUrl;
+        }
 
-        // Blob URLs died with the previous session — never try to restore them.
-        // If a non-blob server URL was saved, it's safe to restore.
-        const savedModelUrl: string | null = projectData.customModelUrl ?? null;
+        const savedModelUrl = projectData.customModelUrl ?? null;
         if (savedModelUrl && !savedModelUrl.startsWith('blob:')) {
             patch.customModelUrl  = savedModelUrl;
             patch.customModelName = projectData.customModelName ?? null;
         } else {
-            // Explicitly null out any stale blob URL that might be in state
             patch.customModelUrl  = null;
             patch.customModelName = null;
         }

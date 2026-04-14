@@ -30,6 +30,7 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
   const [cropCube, setCropCube] = useState<THREE.Mesh | null>(null);
   const lightTarget = useMemo(() => new THREE.Object3D(), []);
   const videoElement = useStore(state => state.videoElement);
+  const setThreeContext = useStore(state => state.setThreeContext);  
 
   const videoEnvTexture = useMemo(() => {
     if (!videoElement) return null;
@@ -40,15 +41,17 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
   }, [videoElement]);
 
   return (
-    <Canvas 
-      className="w-full h-full absolute inset-0 z-10 pointer-events-auto" 
-      camera={{ position: [0, 2, 5], fov: 45 }} 
-      gl={{ alpha: true, preserveDrawingBuffer: true }}
-      shadows={{ type: THREE.PCFSoftShadowMap }}
-      onCreated={({ scene }) => {
-        scene.add(lightTarget);
-      }}
-    >
+      <Canvas 
+        className="w-full h-full absolute inset-0 z-10 pointer-events-auto" 
+        camera={{ position: [0, 2, 5], fov: 45 }} 
+        gl={{ alpha: true, preserveDrawingBuffer: true }}
+        shadows={{ type: THREE.PCFSoftShadowMap }}
+        onCreated={({ scene, gl, camera }) => {
+          scene.add(lightTarget);
+          // ADD THIS:
+          setThreeContext(gl, scene, camera);
+        }}
+      >
       <primitive object={lightTarget} position={objPos} />
       
       {/* Tie ambient light to envIntensity so it scales naturally, rather than hardcoding 0.5 */}
@@ -159,6 +162,7 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
 
           {/* Improved Shadow Catcher: Now a circle with explicit renderOrder for better occlusion by proxies */}
           <mesh 
+            name="shadow-catcher"
             renderOrder={0} 
             rotation={[-Math.PI / 2, 0, 0]} 
             position={[objPos[0], objPos[1] + (localModelLowestY * objScale[1]) + 0.001, objPos[2]]} 

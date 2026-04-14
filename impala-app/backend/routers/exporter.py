@@ -73,7 +73,7 @@ async def crop_project(project_id: str, req: CropRequest):
             
     return {
        "status": "success", 
-       "new_url": f"http://localhost:8000/exports/{project_id}/{output_filename}"
+       "new_url": f"/exports/{project_id}/{output_filename}"
     }
 
 @router.post("/api/projects/{project_id}/export/frame")
@@ -120,13 +120,15 @@ async def finalize_export(project_id: str):
         "-framerate", exact_fps,
         "-i", input_pattern,
         "-filter_complex", "[0:v][1:v]overlay=0:0:eof_action=pass[vout]",
-        "-map", "[vout]",       
-        "-map", "0:a?",         
+        "-map", "[vout]",       # Maps the composited video to the output
+        "-map", "0:a?",         # Maps the original audio track to the output
         "-c:v", "libx264",
         "-pix_fmt", "yuv420p",
-        "-crf", "17",           
+        "-b:v", "20M",          # Forces a 20Mbps bitrate
+        "-maxrate", "25M",
+        "-bufsize", "25M",      
         "-preset", "slow",      
-        "-c:a", "copy",         
+        "-c:a", "copy",         # Copies the audio losslessly without re-compressing
         output_path
     ]
     
@@ -143,6 +145,6 @@ async def finalize_export(project_id: str):
         
     return {
         "status": "success",
-        "url": f"http://localhost:8000/exports/{project_id}/{output_filename}",
+        "url": f"/exports/{project_id}/{output_filename}",
         "filename": output_filename
     }
