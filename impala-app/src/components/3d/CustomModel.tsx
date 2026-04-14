@@ -21,23 +21,29 @@ export const CustomModel = ({ url, onLowestPoint }: { url: string, onLowestPoint
         });
     }, [scene, matRoughness, matMetallic]);
 
+    // Center the model and notify parent of the floor level
     useEffect(() => {
+        if (!scene) return;
+
+        // Use a temporary clone to calculate the intrinsic bounding box 
+        // without current position/rotation/scale interference
+        const cloned = scene.clone();
+        cloned.position.set(0, 0, 0);
+        cloned.rotation.set(0, 0, 0);
+        cloned.scale.set(1, 1, 1);
+        cloned.updateMatrixWorld(true);
+
+        const box = new THREE.Box3().setFromObject(cloned);
+        const center = new THREE.Vector3();
+        box.getCenter(center);
+        
+        // Offset the scene so its visual center is at [0,0,0]
+        // This ensures TransformControls (attached to the parent group) are centered on the model
+        scene.position.set(-center.x, -center.y, -center.z);
+
         if (onLowestPoint) {
-            const box = new THREE.Box3().setFromObject(scene);
-            // Since scene is placed at [0,0,0] in the custom-model-group local space,
-            // the box.min.y in world space corresponds to its lowest extent. 
-            // Wait, we need its purely local lowest point.
-            // But scene.position is natively locally offset.
-            
-            // To be perfectly safe, let's just supply the raw local boundary natively 
-            // without global bleeding by cloning and isolating it.
-            const cloned = scene.clone();
-            cloned.position.set(0, 0, 0);
-            cloned.rotation.set(0, 0, 0);
-            cloned.scale.set(1, 1, 1);
-            cloned.updateMatrixWorld(true);
-            const rawBox = new THREE.Box3().setFromObject(cloned);
-            onLowestPoint(rawBox.min.y);
+            // Report the lowest point relative to the new center
+            onLowestPoint(box.min.y - center.y);
         }
     }, [scene, onLowestPoint]);
 

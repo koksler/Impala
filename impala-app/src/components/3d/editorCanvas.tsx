@@ -58,15 +58,15 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
         color={envTint !== '#ffffff' && envTint !== '#FFFFFF' ? envTint : undefined} 
         castShadow 
         shadow-mapSize={[2048, 2048]} 
-        shadow-camera-left={-20}
-        shadow-camera-right={20}
-        shadow-camera-top={20}
-        shadow-camera-bottom={-20}
-        shadow-camera-near={0.1}
+        shadow-camera-left={-2}
+        shadow-camera-right={2}
+        shadow-camera-top={2}
+        shadow-camera-bottom={-2}
+        shadow-camera-near={0.5}
         shadow-camera-far={50}
         shadow-bias={-0.001}
         shadow-normalBias={0.02}
-        shadow-radius={shadowBlur * 5}
+        shadow-radius={shadowBlur * 15}
       />
 
       <Suspense fallback={null}>
@@ -154,12 +154,12 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
 
           {/* Improved Shadow Catcher: Now a circle with explicit renderOrder for better occlusion by proxies */}
           <mesh 
-            renderOrder={10} // Render on top of splats!
+            renderOrder={0} // Render at the same level as models
             rotation={[-Math.PI / 2, 0, 0]} 
             position={[objPos[0], objPos[1] + (localModelLowestY * objScale[1]) + 0.001, objPos[2]]} 
             receiveShadow
           >
-              <circleGeometry args={[20, 64]} />
+              <circleGeometry args={[15, 64]} />
               <shadowMaterial transparent opacity={shadowOpacity} color={shadowColor} />
             </mesh>
         </group>

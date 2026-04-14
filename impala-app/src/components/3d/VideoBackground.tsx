@@ -9,6 +9,7 @@ interface VideoBackgroundProps {
 export const VideoBackground: React.FC<VideoBackgroundProps> = ({ url, visible }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const { currentFrame, isPlaying, totalFrames, setVideoElement, videoOpacity } = useStore();
+  const isExporting = useStore(state => state.isExporting);  
 
   useEffect(() => {
     if (videoRef.current) {
@@ -23,7 +24,7 @@ export const VideoBackground: React.FC<VideoBackgroundProps> = ({ url, visible }
         const progress = currentFrame / (totalFrames - 1);
         const targetTime = progress * duration;
 
-        if (Math.abs(videoRef.current.currentTime - targetTime) > 0.03) {
+        if (!isPlaying && !isExporting && Math.abs(videoRef.current.currentTime - targetTime) > 0.03) {
             videoRef.current.currentTime = targetTime;
         }
     }
@@ -33,7 +34,7 @@ export const VideoBackground: React.FC<VideoBackgroundProps> = ({ url, visible }
     } else if (!isPlaying && !videoRef.current.paused) {
       videoRef.current.pause();
     }
-  }, [currentFrame, isPlaying, totalFrames]);
+  }, [currentFrame, isPlaying, totalFrames, isExporting, setVideoElement]);
 
   if (!url) return null;
 
