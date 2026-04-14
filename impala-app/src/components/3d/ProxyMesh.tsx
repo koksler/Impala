@@ -14,7 +14,6 @@ export const ProxyMesh: React.FC<ProxyMeshProps> = ({ url, isExporting }) => {
 
     if (!url) return null;
 
-    // We catch the error safely if the mesh doesn't exist yet (e.g. older project)
     let obj: THREE.Group | null = null;
     try {
         obj = useLoader(OBJLoader, url);
@@ -26,12 +25,22 @@ export const ProxyMesh: React.FC<ProxyMeshProps> = ({ url, isExporting }) => {
     const clonedObj = useMemo(() => {
         if (!obj) return null;
         
-        // We create a Group to hold both the shadow catcher and the depth-occluder
         const holdoutGroup = new THREE.Group();
 
         obj.traverse((child) => {
             if (child instanceof THREE.Mesh) {
-                // 1. Shadow Catcher (Transparent, blends with video! Does not occlude Teto reliably due to transparency pass)
+                // 1. Depth Occluder (Invisible, writes depth to hide Teto when she goes behind things)
+                const depthMesh = child.clone();
+                depthMesh.receiveShadow = false;
+                depthMesh.castShadow = false;
+                depthMesh.material = new THREE.MeshBasicMaterial({
+                    colorWrite: false, 
+                    depthWrite: true,
+                });
+                depthMesh.renderOrder = -1; // Draw BEFORE Teto
+                holdoutGroup.add(depthMesh);
+
+                // 2. Shadow Catcher (Wraps shadows cleanly over the real-world geometry)
                 const shadowMesh = child.clone();
                 shadowMesh.receiveShadow = true;
                 shadowMesh.castShadow = false;
@@ -39,22 +48,19 @@ export const ProxyMesh: React.FC<ProxyMeshProps> = ({ url, isExporting }) => {
                     opacity: shadowOpacity,
                     color: new THREE.Color(shadowColor),
                     transparent: true,
-                    depthWrite: false, 
-                    colorWrite: true
+                    depthWrite: false,
+                    depthTest: true,
+                    // FIX 1: Force shadow to catch on both sides of the messy proxy geometry
+                    side: THREE.DoubleSide, 
+                    // FIX 2: Stronger polygon offset to aggressively pull the shadow 
+                    // through the Gaussian Splat depth buffer and the Depth Occluder
+                    polygonOffset: true,
+                    polygonOffsetFactor: -4, 
+                    polygonOffsetUnits: -4
                 });
-                shadowMesh.renderOrder = 1; // Render after Teto (0) but respect depth buffer
+                // FIX 3: Render extremely late to ensure it paints over the splats
+                shadowMesh.renderOrder = 999; 
                 holdoutGroup.add(shadowMesh);
-
-                // 2. Depth Occluder (Invisible, perfectly writes depth BEFORE anything else so Teto is blocked)
-                const depthMesh = child.clone();
-                depthMesh.receiveShadow = false;
-                depthMesh.castShadow = false;
-                depthMesh.material = new THREE.MeshBasicMaterial({
-                    colorWrite: false, // Invisible
-                    depthWrite: true,  // Writes to depth buffer!
-                });
-                depthMesh.renderOrder = -1; // Force draw BEFORE Teto (who defaults to 0)
-                holdoutGroup.add(depthMesh);
             }
         });
 
@@ -63,6 +69,5 @@ export const ProxyMesh: React.FC<ProxyMeshProps> = ({ url, isExporting }) => {
 
     if (!clonedObj) return null;
 
-    // Even if isExporting is true, we must actively RENDER the proxy mesh 
     return <primitive object={clonedObj} visible={isExporting || true} />;
 };

@@ -50,23 +50,28 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
       }}
     >
       <primitive object={lightTarget} position={objPos} />
-      <ambientLight intensity={0.5} />
+      
+      {/* Tie ambient light to envIntensity so it scales naturally, rather than hardcoding 0.5 */}
+      <ambientLight intensity={envIntensity * 0.4} />
+      
       <directionalLight 
         position={[objPos[0] + 5, objPos[1] + 10, objPos[2] + 5]} 
         target={lightTarget}
-        intensity={envIntensity} 
+        // Lower direct intensity so the IBL does the heavy lifting for realistic scene color
+        intensity={envIntensity * 0.6} 
         color={envTint !== '#ffffff' && envTint !== '#FFFFFF' ? envTint : undefined} 
         castShadow 
         shadow-mapSize={[2048, 2048]} 
-        shadow-camera-left={-20}
-        shadow-camera-right={20}
-        shadow-camera-top={20}
-        shadow-camera-bottom={-20}
-        shadow-camera-near={0.1}
+        shadow-camera-left={-3}
+        shadow-camera-right={3}
+        shadow-camera-top={3}
+        shadow-camera-bottom={-3}
+        shadow-camera-near={0.5}
         shadow-camera-far={50}
         shadow-bias={-0.001}
         shadow-normalBias={0.02}
-        shadow-radius={shadowBlur * 5}
+        // Cap the blur multiplier to prevent the PCF dithering noise seen in the screenshots
+        shadow-radius={shadowBlur * 4}
       />
 
       <Suspense fallback={null}>
@@ -154,14 +159,21 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
 
           {/* Improved Shadow Catcher: Now a circle with explicit renderOrder for better occlusion by proxies */}
           <mesh 
-            renderOrder={10} // Render on top of splats!
+            renderOrder={0} 
             rotation={[-Math.PI / 2, 0, 0]} 
             position={[objPos[0], objPos[1] + (localModelLowestY * objScale[1]) + 0.001, objPos[2]]} 
             receiveShadow
           >
-              <circleGeometry args={[20, 64]} />
-              <shadowMaterial transparent opacity={shadowOpacity} color={shadowColor} />
-            </mesh>
+              <circleGeometry args={[15, 64]} />
+              <shadowMaterial 
+                transparent 
+                opacity={shadowOpacity} 
+                color={shadowColor} 
+                // Explicitly respect the depth buffer written by the ProxyMesh
+                depthTest={true} 
+                depthWrite={false} 
+              />
+          </mesh>
         </group>
 
         {bakedEnvTexture ? (

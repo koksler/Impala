@@ -119,11 +119,14 @@ async def finalize_export(project_id: str):
         "-i", original_video_path,
         "-framerate", exact_fps,
         "-i", input_pattern,
-        "-filter_complex", "[0:v][1:v]overlay=0:0:eof_action=pass",
+        "-filter_complex", "[0:v][1:v]overlay=0:0:eof_action=pass[vout]",
+        "-map", "[vout]",       
+        "-map", "0:a?",         
         "-c:v", "libx264",
         "-pix_fmt", "yuv420p",
-        "-crf", "16",
-        "-preset", "medium",
+        "-crf", "17",           
+        "-preset", "slow",      
+        "-c:a", "copy",         
         output_path
     ]
     
