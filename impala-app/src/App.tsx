@@ -39,11 +39,30 @@ export default function App() {
         return;
       }
       if (ctrl && e.key.toLowerCase() === 'z') {
+        const { undo, redo, activeProjectId, isExporting } = useStore.getState();
+        if (!activeProjectId || isExporting) return;
+
         e.preventDefault();
         e.stopPropagation();
-        console.log(e.shiftKey ? 'Redo triggered' : 'Undo triggered');
+        
+        if (e.shiftKey) {
+            redo();
+        } else {
+            undo();
+        }
         return;
       }
+
+      if (ctrl && e.key.toLowerCase() === 'y') {
+        const { redo, activeProjectId, isExporting } = useStore.getState();
+        if (!activeProjectId || isExporting) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        redo();
+        return;
+      }
+
 
       // ── Tool shortcuts — skip when typing in an input / textarea ──
       const target = e.target as HTMLElement;

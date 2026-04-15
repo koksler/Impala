@@ -146,6 +146,15 @@ interface AppState {
 
     saveCurrentProject: () => Promise<void>;
     loadProjectSettings: (projectData: Record<string, any>) => void;
+
+    // HISTORY (Undo/Redo)
+    lastCommittedState: any | null;
+    undoStack: any[];
+    redoStack: any[];
+    pushToHistory: () => void;
+    undo: () => void;
+    redo: () => void;
+    clearHistory: () => void;
 }
 
 
@@ -355,34 +364,55 @@ export const useStore = create<AppState>((set) => ({
 
         let glCanvas = document.querySelector('canvas[data-engine^="three.js"]') as HTMLCanvasElement;
 
-        // --- THE PHOTOSHOP CANVASES ---
         const tetoCanvas = document.createElement('canvas'); tetoCanvas.width = width; tetoCanvas.height = height;
-        const tetoCtx = tetoCanvas.getContext('2d')!;
+        const tetoCtx = tetoCanvas.getContext('2d', { willReadFrequently: true })!;
 
         const maskCanvas = document.createElement('canvas'); maskCanvas.width = width; maskCanvas.height = height;
-        const maskCtx = maskCanvas.getContext('2d')!;
+        const maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true })!;
 
         const finalCanvas = document.createElement('canvas'); finalCanvas.width = width; finalCanvas.height = height;
         const finalCtx = finalCanvas.getContext('2d')!;
 
+        // --- СОХРАНЯЕМ СОСТОЯНИЕ WEBGL ---
         const oldAutoClear = gl.autoClear;
         const oldBg = scene.background;
+        const oldToneMapping = gl.toneMapping;
+        const oldToneMappingExposure = gl.toneMappingExposure;
+        const oldOutputColorSpace = gl.outputColorSpace;
         const WORLD_ROTATION = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
 
         try {
             set({ cameraEnabled: true, showGrid: false, activeTool: 'hand' });
+            
+            // --- УЛУЧШЕНИЕ ОСВЕЩЕНИЯ И ЦВЕТА ---
             gl.autoClear = false;
+            gl.toneMapping = THREE.ACESFilmicToneMapping;
+            gl.toneMappingExposure = 1.1; // Делаем чуть светлее и контрастнее
+            gl.outputColorSpace = THREE.SRGBColorSpace;
             
             const modelsGroup = scene.getObjectByName('custom-model-group');
             const shadowCatcher = scene.getObjectByName('shadow-catcher');
             const splatViewer = useStore.getState().splatViewer;
+            
+            let currentBatch: { blob: Blob, index: number }[] = [];
 
             for (let i = 0; i < totalFrames; i++) {
                 useStore.getState().setCurrentFrame(i);
                 
                 // 1. Sync Video
-                videoElement.currentTime = (totalFrames > 1 ? i / (totalFrames - 1) : 0) * videoElement.duration;
-                await new Promise<void>(res => { const check = () => videoElement.readyState >= 3 ? res() : setTimeout(check, 10); check(); });
+                await new Promise<void>(resolve => { 
+                    let fired = false;
+                    const onSeeked = () => {
+                        if (!fired) {
+                            fired = true;
+                            videoElement.removeEventListener('seeked', onSeeked);
+                            resolve();
+                        }
+                    };
+                    videoElement.addEventListener('seeked', onSeeked);
+                    videoElement.currentTime = (totalFrames > 1 ? i / (totalFrames - 1) : 0) * videoElement.duration;
+                    setTimeout(onSeeked, 200); 
+                });
 
                 // 2. Sync Camera
                 if (cameraData && cameraData[i]) {
@@ -409,14 +439,13 @@ export const useStore = create<AppState>((set) => ({
                 // 3. Trigger Splat Worker
                 if (splatViewer) splatViewer.visible = true;
                 gl.render(scene, camera);
-                // CRITICAL: Give splat worker 60ms to mathematically sort points for the new camera angle
-                await new Promise(r => setTimeout(r, 60)); 
+                await new Promise(r => setTimeout(r, 50)); 
 
                 scene.background = null;
-                gl.setClearColor(0x000000, 0); // Pure transparent
+                gl.setClearColor(0x000000, 0);
 
                 // ==========================================
-                // PASS 1: TETO ONLY
+                // PASS 1: 3D MODELS ONLY
                 // ==========================================
                 if (splatViewer) splatViewer.visible = false;
                 if (shadowCatcher) shadowCatcher.visible = true;
@@ -424,7 +453,6 @@ export const useStore = create<AppState>((set) => ({
                     modelsGroup.visible = true;
                     modelsGroup.traverse((c: any) => { if (c.material) c.material.colorWrite = true; });
                 }
-
                 gl.clear(true, true, true);
                 gl.render(scene, camera);
                 tetoCtx.clearRect(0, 0, width, height);
@@ -434,41 +462,45 @@ export const useStore = create<AppState>((set) => ({
                 // PASS 2: THE MASK (WITH DEPTH SHIELD)
                 // ==========================================
                 if (splatViewer) splatViewer.visible = true;
-                if (shadowCatcher) shadowCatcher.visible = false; // Don't erase her shadow
+                if (shadowCatcher) shadowCatcher.visible = false; 
                 if (modelsGroup) {
                     modelsGroup.visible = true;
-                    // Teto becomes invisible, but writes her 3D volume to the depth buffer to block the background walls!
                     modelsGroup.traverse((c: any) => { if (c.material) c.material.colorWrite = false; });
                 }
-
                 gl.clear(true, true, true);
                 gl.render(scene, camera);
                 maskCtx.clearRect(0, 0, width, height);
                 maskCtx.drawImage(glCanvas, 0, 0, width, height);
 
                 // ==========================================
-                // PASS 3: 2D PHOTOSHOP COMPOSITE
+                // PASS 3: 2D COMPOSITE (PRO TRANSPARENT)
                 // ==========================================
                 finalCtx.clearRect(0, 0, width, height);
                 
-                // Base Layer: Teto
                 finalCtx.globalCompositeOperation = 'source-over';
                 finalCtx.drawImage(tetoCanvas, 0, 0, width, height);
                 
-                // Eraser Layer: Erase Teto where the Chair Splat exists
                 finalCtx.globalCompositeOperation = 'destination-out';
                 finalCtx.drawImage(maskCanvas, 0, 0, width, height);
                 
-                // Background Layer: Drop the pristine original video underneath
-                finalCtx.globalCompositeOperation = 'destination-over';
-                finalCtx.drawImage(videoElement, 0, 0, width, height);
+                // ВАЖНО: Мы больше НЕ рисуем видео фон здесь! 
+                // Мы отправляем прозрачный кадр, чтобы FFmpeg сам наложил его в идеальном качестве.
 
-                // Upload Frame
-                const blob = await new Promise<Blob | null>(resolve => finalCanvas.toBlob(resolve, 'image/webp', 1.0));
+                // --- BATCH UPLOAD (Быстрый WebP) ---
+                const blob = await new Promise<Blob | null>(resolve => finalCanvas.toBlob(resolve, 'image/webp', 0.95));
                 if (blob) {
-                    const formData = new FormData();
-                    formData.append('frame', blob, `frame_${i}.webp`);
-                    await fetch(`/api/projects/${activeProjectId}/export/frame?index=${i}`, { method: 'POST', body: formData });
+                    currentBatch.push({ blob, index: i });
+                }
+
+                if (currentBatch.length >= 30 || i === totalFrames - 1) {
+                    if (currentBatch.length > 0) {
+                        const formData = new FormData();
+                        for (const item of currentBatch) {
+                            formData.append('frames', item.blob, `frame_${String(item.index).padStart(5, '0')}.webp`);
+                        }
+                        await fetch(`/api/projects/${activeProjectId}/export/batch`, { method: 'POST', body: formData });
+                        currentBatch = []; // Чистим RAM
+                    }
                 }
 
                 state.updateToast(toastId, {
@@ -477,29 +509,41 @@ export const useStore = create<AppState>((set) => ({
                 });
             }
 
-            // Restore State
-            gl.autoClear = oldAutoClear;
-            scene.background = oldBg;
-            if (modelsGroup) modelsGroup.traverse((c: any) => { if (c.material) c.material.colorWrite = true; });
-
-            state.updateToast(toastId, { message: 'Stitching pristine video...', progress: 100 });
+            state.updateToast(toastId, { message: 'Encoding studio-quality video with FFmpeg...', progress: 100 });
+            
             const res = await fetch(`/api/projects/${activeProjectId}/export/finalize?fps=${fps || 24}`, { method: 'POST' });
+            
             if (res.ok) {
                 const data = await res.json();
-                state.updateToast(toastId, { type: 'success', title: 'Export Complete', message: 'Video exported.' });
-                const a = document.createElement('a'); a.href = data.url; a.download = data.filename; a.click();
-            } else throw new Error('Finalize failed');
+                state.updateToast(toastId, { type: 'success', title: 'Export Complete', message: 'Video downloaded successfully.' });
+                
+                const a = document.createElement('a'); 
+                a.href = data.url; 
+                a.download = data.filename || `impala_render_${activeProjectId}.mp4`; 
+                a.click();
+            } else {
+                throw new Error('Finalize failed on backend');
+            }
 
         } catch (error) {
             console.error('[EXPORT]', error);
-            state.updateToast(toastId, { type: 'error', title: 'Export Failed', message: 'Check console.' });
-            gl.autoClear = oldAutoClear; scene.background = oldBg;
+            state.updateToast(toastId, { type: 'error', title: 'Export Failed', message: 'Check console for errors.' });
         } finally {
+            // Restore State
+            gl.autoClear = oldAutoClear;
+            gl.toneMapping = oldToneMapping;
+            gl.toneMappingExposure = oldToneMappingExposure;
+            gl.outputColorSpace = oldOutputColorSpace;
+            scene.background = oldBg;
+            
+            const modelsGroup = scene.getObjectByName('custom-model-group');
+            if (modelsGroup) modelsGroup.traverse((c: any) => { if (c.material) c.material.colorWrite = true; });
+            
             camera.matrixAutoUpdate = true;
             set({ ...preExportState, isExporting: false });
         }
     },
-
+    
     saveCurrentProject: async () => {
         const state = useStore.getState();
         const { activeProjectId, addToast, updateToast } = state;
@@ -595,6 +639,115 @@ export const useStore = create<AppState>((set) => ({
 
         if (Object.keys(patch).length > 0) {
             set(patch);
+            // Initialize history reference if not already set (e.g. first load)
+            const currentStore = useStore.getState();
+            if (!currentStore.lastCommittedState) {
+                set({ lastCommittedState: getSnapshot(currentStore) });
+            }
         }
     },
+
+    clearHistory: () => set({ 
+        undoStack: [], 
+        redoStack: [], 
+        lastCommittedState: getSnapshot(useStore.getState()) 
+    }),
+
+    lastCommittedState: null,
+    undoStack: [],
+    redoStack: [],
+
+    pushToHistory: () => {
+        const state = useStore.getState();
+        const currentSnapshot = getSnapshot(state);
+        
+        // If we don't have a starting point, initialize it and don't push yet
+        if (!state.lastCommittedState) {
+            set({ lastCommittedState: currentSnapshot });
+            return;
+        }
+
+        // Check for equality to avoid useless entries
+        if (isSameSnapshot(state.lastCommittedState, currentSnapshot)) return;
+
+        set((state) => {
+            const newUndoStack = [...state.undoStack, state.lastCommittedState];
+            if (newUndoStack.length > 50) newUndoStack.shift();
+            return {
+                undoStack: newUndoStack,
+                redoStack: [], // branch history
+                lastCommittedState: currentSnapshot
+            };
+        });
+    },
+
+    undo: () => {
+        const state = useStore.getState();
+        if (state.undoStack.length === 0) return;
+
+        const previousState = state.undoStack[state.undoStack.length - 1];
+        const newUndoStack = state.undoStack.slice(0, -1);
+        const currentSnapshot = getSnapshot(state);
+
+        set({
+            ...previousState,
+            lastCommittedState: previousState,
+            undoStack: newUndoStack,
+            redoStack: [currentSnapshot, ...state.redoStack].slice(0, 50)
+        });
+    },
+
+    redo: () => {
+        const state = useStore.getState();
+        if (state.redoStack.length === 0) return;
+
+        const nextState = state.redoStack[0];
+        const newRedoStack = state.redoStack.slice(1);
+        const currentSnapshot = getSnapshot(state);
+
+        set({
+            ...nextState,
+            lastCommittedState: nextState,
+            redoStack: newRedoStack,
+            undoStack: [...state.undoStack, currentSnapshot].slice(-50)
+        });
+    },
 }));
+
+// --- Pure Helper functions for History ---
+
+function getSnapshot(state: AppState) {
+    return {
+        objPos: [...state.objPos],
+        objRot: [...state.objRot],
+        objScale: [...state.objScale],
+        scenePos: [...state.scenePos],
+        sceneRot: [...state.sceneRot],
+        sceneScale: [...state.sceneScale],
+        shadowOpacity: state.shadowOpacity,
+        shadowBlur: state.shadowBlur,
+        shadowColor: state.shadowColor,
+        matRoughness: state.matRoughness,
+        matMetallic: state.matMetallic,
+        envIntensity: state.envIntensity,
+        envRotation: state.envRotation,
+        envTint: state.envTint,
+    };
+}
+
+function isSameSnapshot(a: any, b: any) {
+    if (!a || !b) return false;
+    for (const key in a) {
+        if (Array.isArray(a[key])) {
+            const arrA = a[key] as any[];
+            const arrB = b[key] as any[];
+            if (arrA.length !== arrB.length) return false;
+            for (let i = 0; i < arrA.length; i++) {
+                if (arrA[i] !== arrB[i]) return false;
+            }
+        } else {
+            if (a[key] !== b[key]) return false;
+        }
+    }
+    return true;
+}

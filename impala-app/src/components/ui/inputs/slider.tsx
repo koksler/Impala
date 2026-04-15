@@ -7,6 +7,7 @@ interface SliderProps {
     max?: number;
     step?: number;
     onChange: (value: number) => void;
+    onPointerUp?: () => void;
     className?: string;
 }
 
@@ -17,6 +18,7 @@ export const Slider: React.FC<SliderProps> = ({
     max = 1,
     step = 0.01,
     onChange,
+    onPointerUp,
     className = ''
 }) => {
     const percentage = Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));
@@ -36,8 +38,10 @@ export const Slider: React.FC<SliderProps> = ({
                 step={step}
                 value={value}
                 onChange={(e) => onChange(parseFloat(e.target.value))}
+                onPointerUp={onPointerUp}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize m-0 p-0"
             />
+
 
             <div className="relative z-10 flex justify-between w-full px-[12px] pointer-events-none">
                 <span className="font-sans text-[12px] text-text-main select-none">

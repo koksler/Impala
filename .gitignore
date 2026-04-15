@@ -7,3 +7,5 @@
 /impala-app/backend/outputs
 /impala-app/backend/processed_data
 /impala-app/backend/exports
+/impala-app/backend/projects_assets
+/impala-app/backend/routers/__pycache__

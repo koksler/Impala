@@ -10,9 +10,10 @@ interface AxisBlobProps {
     axis: keyof Vector3;
     val: number;
     onChange: (axis: keyof Vector3, value: string) => void;
+    onFinishChange?: () => void;
 }
 
-const AxisBlob: React.FC<AxisBlobProps> = ({ axis, val, onChange }) => (
+const AxisBlob: React.FC<AxisBlobProps> = ({ axis, val, onChange, onFinishChange }) => (
     <div className="flex justify-between items-center bg-bg-item rounded-[7px] py-[2px] px-[6px] flex-1">
         <span className="font-sans text-[12px] text-text-main select-none">
             {axis.toUpperCase()}
@@ -22,6 +23,13 @@ const AxisBlob: React.FC<AxisBlobProps> = ({ axis, val, onChange }) => (
                 type="number"
                 value={val}
                 onChange={(e) => onChange(axis, e.target.value)}
+                onBlur={onFinishChange}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                        (e.target as HTMLInputElement).blur();
+                        onFinishChange?.();
+                    }
+                }}
                 className="w-full bg-transparent border-none outline-none text-right font-sans text-[12px] text-text-main focus:ring-0 p-0 m-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
             <span className="font-sans text-[12px] text-text-main ml-[2px] select-none">
@@ -38,6 +46,7 @@ interface Vector3InputProps {
     y: number;
     z: number;
     onChange: (values: Vector3) => void;
+    onFinishChange?: () => void;
     className?: string;
 }
 
@@ -48,6 +57,7 @@ export const Vector3Input: React.FC<Vector3InputProps> = ({
     y,
     z,
     onChange,
+    onFinishChange,
     className = ''
 }) => {
     const handleAxisChange = (axis: keyof Vector3, value: string) => {
@@ -67,10 +77,10 @@ export const Vector3Input: React.FC<Vector3InputProps> = ({
             </div>
             
             <div className="flex items-center gap-[6px] w-full">
-                <AxisBlob axis="x" val={x} onChange={handleAxisChange} />
-                <AxisBlob axis="y" val={y} onChange={handleAxisChange} />
-                <AxisBlob axis="z" val={z} onChange={handleAxisChange} />
+                <AxisBlob axis="x" val={x} onChange={handleAxisChange} onFinishChange={onFinishChange} />
+                <AxisBlob axis="y" val={y} onChange={handleAxisChange} onFinishChange={onFinishChange} />
+                <AxisBlob axis="z" val={z} onChange={handleAxisChange} onFinishChange={onFinishChange} />
             </div>
         </div>
     );
-};
+};

@@ -21,7 +21,8 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
     cropBox, setCropBox, isCropping, customModelUrl,
     bakedEnvTexture, isExporting,
     // Add export pipeline dependencies
-    currentFrame, totalFrames, setPlaying, updateToast, preExportState
+    currentFrame, totalFrames, setPlaying, updateToast, preExportState,
+    pushToHistory
   } = useStore();
   
   const [cube, setCube] = useState<THREE.Object3D | null>(null);
@@ -92,6 +93,7 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
             translationSnap={snapToGrid ? 1 : null}
             rotationSnap={snapToGrid ? Math.PI / 8 : null}
             scaleSnap={snapToGrid ? 0.25 : null}
+            onMouseUp={pushToHistory}
             onChange={() => {
               if (sceneGroupWrapper) {
                 setScenePos([sceneGroupWrapper.position.x, sceneGroupWrapper.position.y, sceneGroupWrapper.position.z]);
@@ -100,6 +102,7 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
               }
             }}
           />
+
         )}
 
         {!isExporting && transformTarget === 'object' && showModels && !isCropping && (activeTool === 'translate' || activeTool === 'rotate' || activeTool === 'scale') && cube && (
@@ -109,6 +112,7 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
             translationSnap={snapToGrid ? 1 : null}
             rotationSnap={snapToGrid ? Math.PI / 8 : null}
             scaleSnap={snapToGrid ? 0.25 : null}
+            onMouseUp={pushToHistory}
             onChange={() => {
               if (cube) {
                 setObjPos([cube.position.x, cube.position.y, cube.position.z]);
@@ -117,6 +121,7 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
               }
             }}
           />
+
         )}
 
         <group position={[0, -1.5, 0]}>

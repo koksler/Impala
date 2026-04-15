@@ -5,6 +5,7 @@ interface ValueInputRowProps {
     value: string | number;
     unit?: string;
     onChange: (value: string) => void;
+    onFinishChange?: () => void;
     className?: string;
 }
 
@@ -13,6 +14,7 @@ export const ValueInputRow: React.FC<ValueInputRowProps> = ({
     value,
     unit = '',
     onChange,
+    onFinishChange,
     className = ''
 }) => {
     return (
@@ -25,8 +27,15 @@ export const ValueInputRow: React.FC<ValueInputRowProps> = ({
                     type="text"
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
+                    onBlur={onFinishChange}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                            (e.target as HTMLInputElement).blur();
+                        }
+                    }}
                     className="w-full bg-transparent border-none outline-none text-right font-sans text-[12px] text-text-main focus:ring-0 p-0 m-0"
                 />
+
                 {unit && (
                     <span className="font-sans text-[12px] text-text-main ml-[2px] select-none shrink-0">
                         {unit}

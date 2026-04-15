@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, Form, BackgroundTasks
+from fastapi import FastAPI, File, UploadFile, Form, BackgroundTasks, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import shutil
@@ -30,7 +30,7 @@ app = FastAPI(title="Impala Backend Core")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # ["http://localhost:5173"]
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -60,15 +60,6 @@ project_status_db = {}
 def get_status():
     return {"status": "online"}
 
-def process_video_background(file_path: str, project_id: str):
-    print(f"[BACKGROUND] Starting pipeline for {project_id}")
-    success = run_nerfstudio_pipeline(video_path=file_path, project_id=project_id)
-    
-    if success:
-        print(f"[BACKGROUND] Project {project_id} is ready for 3D viewing!")
-    else:
-        print(f"[BACKGROUND] Project {project_id} failed.")
-    
 @app.post("/api/upload")
 async def upload_file(background_tasks: BackgroundTasks, file: UploadFile = File(...), title: str = Form(...)):
     project_id = str(uuid.uuid4())
@@ -80,20 +71,20 @@ async def upload_file(background_tasks: BackgroundTasks, file: UploadFile = File
         shutil.copyfileobj(file.file, buffer)
         
     project_status_db[project_id] = {"status": "starting", "progress": 0}
-    
     background_tasks.add_task(background_pipeline, file_path, project_id, title)
     
     return {"status": "success", "project_id": project_id}
     
 @app.get("/api/projects")
 def get_projects():
+    if not os.path.exists(PROJECTS_FILE):
+        return []
     with open(PROJECTS_FILE, "r") as f:
         return json.load(f)
     
 @app.get("/api/projects/{project_id}/status")
 def get_project_status(project_id: str):
     return project_status_db.get(project_id, {"status": "unknown", "progress": 0})
-
 
 def background_pipeline(file_path: str, project_id: str, title: str):
     """Bg task during upload progress"""
@@ -103,8 +94,6 @@ def background_pipeline(file_path: str, project_id: str, title: str):
     
     if success:
         project_status_db[project_id] = {"status": "done", "progress": 100}
-        
-        # Derive the public video URL from the saved upload filename
         upload_filename = os.path.basename(file_path)
 
         new_project = {
@@ -129,7 +118,6 @@ def background_pipeline(file_path: str, project_id: str, title: str):
     else:
         project_status_db[project_id] = {"status": "error", "progress": 0}
         
-        
 @app.middleware("http")
 async def add_security_headers(request, call_next):
     response = await call_next(request)
@@ -146,28 +134,16 @@ def get_project_tracking(project_id: str):
 
 @app.get("/api/projects/{project_id}/dataparser-transforms")
 def get_dataparser_transforms(project_id: str):
-    """Returns the nerfstudio dataparser_transforms.json that encodes the
-    applied_transform + scale used to align camera poses with the exported
-    Gaussian splat (.ply) coordinate space."""
     search_pattern = os.path.join("outputs", project_id, "splatfacto", "*", "dataparser_transforms.json")
     dp_paths = glob.glob(search_pattern)
-    
     if not dp_paths:
         return {"error": "Dataparser transforms not found"}
-        
     latest_dp = max(dp_paths, key=os.path.getctime)
     with open(latest_dp, "r") as f:
         return json.load(f)
     
 @app.get("/api/projects/{project_id}/cameras")
 def get_project_cameras(project_id: str):
-    """Returns camera poses enriched with intrinsics from COLMAP.
-    
-    ns-export cameras produces a bare array of {file_path, transform} objects
-    with NO intrinsics.  The intrinsics live in processed_data/transforms.json
-    (the COLMAP-derived file). We merge them so the frontend has everything it
-    needs to calculate the correct FOV.
-    """
     poses_path   = f"exports/{project_id}/transforms_train.json"
     colmap_path  = f"processed_data/{project_id}/transforms.json"
 
@@ -181,7 +157,6 @@ def get_project_cameras(project_id: str):
             with open(fallback, "r") as f:
                 cameras_raw = json.load(f)
 
-    # Normalise to a list of frame dicts no matter what nerfstudio produces
     if isinstance(cameras_raw, list):
         frames = cameras_raw
     elif isinstance(cameras_raw, dict):
@@ -189,7 +164,6 @@ def get_project_cameras(project_id: str):
     else:
         frames = []
 
-    # Load COLMAP intrinsics (fl_y, h, w, etc.)
     intrinsics = {}
     if os.path.exists(colmap_path):
         with open(colmap_path, "r") as f:
@@ -222,20 +196,13 @@ class SaveSettings(BaseModel):
 
 @app.post("/api/projects/{project_id}/save")
 def save_project_settings(project_id: str, settings: SaveSettings):
-    """Persist 3D scene / material / environment settings for a project."""
     with open(PROJECTS_FILE, "r") as f:
         projects = json.load(f)
 
     project = next((p for p in projects if p["id"] == project_id), None)
     if project is None:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # Merge fields, allowing explicit nulls to clear values
-    payload = settings.model_dump()
-    # Filter out only fields that weren't actually in the SaveSettings model (if any defaults)
-    # but we want to keep things that were sent as null.
-    # Pydantic's model_dump(exclude_unset=True) is better here.
     payload = settings.model_dump(exclude_unset=True)
     project.update(payload)
     project["lastOpened"] = datetime.now().strftime("%Y-%m-%d")
@@ -247,19 +214,15 @@ def save_project_settings(project_id: str, settings: SaveSettings):
 
 @app.post("/api/projects/{project_id}/model")
 async def upload_project_model(project_id: str, file: UploadFile = File(...)):
-    """Upload a custom 3D model (.glb/.gltf) to the project's assets."""
-    # Create project-specific asset directory
     project_assets_dir = os.path.join("projects_assets", project_id)
     os.makedirs(project_assets_dir, exist_ok=True)
     
-    # Optional: Clean up old models to save space
     for old_file in os.listdir(project_assets_dir):
         try:
             os.remove(os.path.join(project_assets_dir, old_file))
         except:
             pass
             
-    # Save file
     safe_filename = file.filename.replace(" ", "_")
     file_path = os.path.join(project_assets_dir, safe_filename)
     
@@ -271,3 +234,54 @@ async def upload_project_model(project_id: str, file: UploadFile = File(...)):
         "url": f"http://localhost:8000/projects_assets/{project_id}/{safe_filename}",
         "name": file.filename
     }
+
+@app.delete("/api/projects/{project_id}")
+def delete_project(project_id: str):
+    """Delete a project and all its associated data (uploads, exports, processed data)."""
+    if not os.path.exists(PROJECTS_FILE):
+        raise HTTPException(status_code=404, detail="Projects list not found")
+
+    with open(PROJECTS_FILE, "r") as f:
+        projects = json.load(f)
+
+    project = next((p for p in projects if p["id"] == project_id), None)
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # 1. Identify upload file from video_url
+    video_url = project.get("video_url")
+    if video_url:
+        upload_filename = os.path.basename(video_url)
+        upload_path = os.path.join(UPLOAD_DIR, upload_filename)
+        if os.path.exists(upload_path):
+            try:
+                os.remove(upload_path)
+            except Exception as e:
+                print(f"[DELETE] Could not remove upload: {e}")
+
+    # 2. Remove directories
+    dirs_to_remove = [
+        os.path.join(EXPORT_DIR, project_id),
+        os.path.join("processed_data", project_id),
+        os.path.join("projects_assets", project_id),
+        os.path.join("outputs", project_id)
+    ]
+
+    for d in dirs_to_remove:
+        if os.path.exists(d):
+            try:
+                shutil.rmtree(d)
+                print(f"[DELETE] Removed directory: {d}")
+            except Exception as e:
+                print(f"[DELETE] Could not remove directory {d}: {e}")
+
+    # 3. Update projects.json
+    projects = [p for p in projects if p["id"] != project_id]
+    with open(PROJECTS_FILE, "w") as f:
+        json.dump(projects, f, indent=4)
+
+    # 4. Cleanup background status
+    if project_id in project_status_db:
+        del project_status_db[project_id]
+
+    return {"status": "deleted", "project_id": project_id}

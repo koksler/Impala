@@ -2,26 +2,26 @@
     {
         "id": "cb308b2a-60cd-465e-8ab8-fcd1aa114607",
         "title": "New 3D Scene",
-        "lastOpened": "2026-04-11",
+        "lastOpened": "2026-04-14",
         "img": "/projects_assets/default_thumb.webp",
         "splat_url": "http://localhost:8000/exports/cb308b2a-60cd-465e-8ab8-fcd1aa114607/splat.ply",
         "cameras_url": "http://localhost:8000/api/projects/cb308b2a-60cd-465e-8ab8-fcd1aa114607/cameras",
         "video_url": "http://localhost:8000/uploads/cb308b2a-60cd-465e-8ab8-fcd1aa114607.mp4",
         "dataparser_transforms_url": "http://localhost:8000/api/projects/cb308b2a-60cd-465e-8ab8-fcd1aa114607/dataparser-transforms",
         "objPos": [
-            0.0,
-            0.5,
-            0.0
+            -0.8444956941291341,
+            0.8211541309765975,
+            -0.3769540118319624
         ],
         "objRot": [
-            0.0,
-            68.0,
-            0.0
+            -1.0678567799633019,
+            1.4117872002673875,
+            1.2291628685684208
         ],
         "objScale": [
-            1.0,
-            1.0,
-            1.0
+            0.05,
+            0.05,
+            0.05
         ],
         "scenePos": [
             0.0,
@@ -38,11 +38,11 @@
             1.0,
             1.0
         ],
-        "shadowOpacity": 0.4,
-        "shadowBlur": 0.5,
+        "shadowOpacity": 1.0,
+        "shadowBlur": 0.0,
         "shadowColor": "#313133",
-        "matRoughness": 0.2,
-        "matMetallic": 0.8,
+        "matRoughness": 0.75,
+        "matMetallic": 0.0,
         "envIntensity": 1.0,
         "envRotation": 0.0,
         "envTint": "#ffffff",
@@ -100,24 +100,5 @@
         "customModelUrl": null,
         "customModelName": null,
         "savedSplatUrl": "http://localhost:8000/exports/4bb64e17-f17b-40a8-b2fa-6b5d71cedb8c/splat_cropped_731b58ce.ply"
-    },
-    {
-        "id": "8fe078aa-9432-4523-865f-98bd3c951cb3",
-        "title": "Zalupa",
-        "lastOpened": "2026-04-05",
-        "img": "/projects_assets/default_thumb.webp",
-        "splat_url": "http://localhost:8000/exports/8fe078aa-9432-4523-865f-98bd3c951cb3/splat.ply",
-        "cameras_url": "http://localhost:8000/api/projects/8fe078aa-9432-4523-865f-98bd3c951cb3/cameras",
-        "video_url": "http://localhost:8000/uploads/8fe078aa-9432-4523-865f-98bd3c951cb3.mp4"
-    },
-    {
-        "id": "8f1ec8c8-0e45-4349-ace5-b6c8781fbd11",
-        "title": "Democracy of \u042b",
-        "lastOpened": "2026-04-03",
-        "img": "/projects_assets/default_thumb.webp",
-        "splat_url": "http://localhost:8000/exports/8f1ec8c8-0e45-4349-ace5-b6c8781fbd11/splat.ply",
-        "transforms_url": "http://localhost:8000/api/projects/8f1ec8c8-0e45-4349-ace5-b6c8781fbd11/tracking",
-        "dataparser_transforms_url": "http://localhost:8000/api/projects/8f1ec8c8-0e45-4349-ace5-b6c8781fbd11/dataparser-transforms",
-        "video_url": "http://localhost:8000/uploads/4b88fa03-f301-4bdb-9cfa-ee6d452dd4fe.mp4"
     }
 ]

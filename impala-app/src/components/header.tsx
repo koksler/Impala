@@ -27,6 +27,13 @@ export const Header: React.FC<HeaderProps> = ({
     const saveCurrentProject = useStore(s => s.saveCurrentProject);
     const startExportPipeline = useStore(s => s.startExportPipeline);
     const isExporting = useStore(s => s.isExporting);
+    const undo = useStore(s => s.undo);
+    const redo = useStore(s => s.redo);
+    const undoStack = useStore(s => s.undoStack);
+    const redoStack = useStore(s => s.redoStack);
+
+
+
 
     return (
         <header className={`relative w-full h-[60px] px-[16px] py-[10px] flex items-center justify-between bg-bg border-b border-bg-border text-base text-text-main transition-all duration-300 ${isExporting ? 'pointer-events-none opacity-50 shadow-none' : ''}`}>
@@ -61,15 +68,16 @@ export const Header: React.FC<HeaderProps> = ({
                     <>
                         {/* Thats History Controls */}
                         <Tooltip content="Undo" hotkey="Ctrl+Z" position="bottom">
-                            <Button variant="icon">
+                            <Button variant="icon" onClick={undo} disabled={undoStack.length === 0}>
                                 <UndoIcon className="w-6 h-6" />
                             </Button>
                         </Tooltip>
                         <Tooltip content="Redo" hotkey="Ctrl+Shift+Z" position="bottom">
-                            <Button variant="icon">
+                            <Button variant="icon" onClick={redo} disabled={redoStack.length === 0}>
                                 <RedoIcon className="w-6 h-6" />
                             </Button>
                         </Tooltip>
+
 
                         {/* Export Action */}
                         <Tooltip content="Export Project" position="bottom">

@@ -43,7 +43,8 @@ export const ObjectSettingsPanel: React.FC<ObjectSettingsPanelProps> = ({isMinim
         matMetallic, setMatMetallic,
         customModelName,
         setCustomModelUrl,
-        setCustomModelName
+        setCustomModelName,
+        pushToHistory
     } = useStore();
 
     const pos = transformTarget === 'object' ? objPos : scenePos;
@@ -118,19 +119,23 @@ export const ObjectSettingsPanel: React.FC<ObjectSettingsPanelProps> = ({isMinim
                             icon={<LocateIcon />} 
                             x={pos[0]} y={pos[1]} z={pos[2]}
                             onChange={(v) => setPos([v.x, v.y, v.z])} 
+                            onFinishChange={pushToHistory}
                         />
                         <Vector3Input 
                             label="Rotation" 
                             icon={<RotateIcon />} 
                             x={rot[0]} y={rot[1]} z={rot[2]}
                             onChange={(v) => setRot([v.x, v.y, v.z])} 
+                            onFinishChange={pushToHistory}
                         />
                         <Vector3Input 
                             label="Scale" 
                             icon={<ScaleIcon />} 
                             x={scale[0]} y={scale[1]} z={scale[2]}
                             onChange={(v) => setScale([v.x, v.y, v.z])} 
+                            onFinishChange={pushToHistory}
                         />
+
                     </div>
 
                     <div className="flex flex-col gap-[8px] px-[12px] mt-[15px]">
@@ -178,8 +183,8 @@ export const ObjectSettingsPanel: React.FC<ObjectSettingsPanelProps> = ({isMinim
                     </div>
 
                     <div className="flex flex-col gap-[10px] px-[12px]">
-                        <Slider label="Opacity" value={shadowOpacity} onChange={setShadowOpacity} />
-                        <Slider label="Blur" value={shadowBlur} onChange={setShadowBlur} />
+                        <Slider label="Opacity" value={shadowOpacity} onChange={setShadowOpacity} onPointerUp={pushToHistory} />
+                        <Slider label="Blur" value={shadowBlur} onChange={setShadowBlur} onPointerUp={pushToHistory} />
                         <ColorPicker color={shadowColor} onChange={setShadowColor} />
                     </div>
 
@@ -189,9 +194,10 @@ export const ObjectSettingsPanel: React.FC<ObjectSettingsPanelProps> = ({isMinim
                     </div>
 
                     <div className="flex flex-col gap-[10px] px-[12px]">
-                        <Slider label="Roughness" value={matRoughness} onChange={setMatRoughness} />
-                        <Slider label="Metallic" value={matMetallic} onChange={setMatMetallic} />
+                        <Slider label="Roughness" value={matRoughness} onChange={setMatRoughness} onPointerUp={pushToHistory} />
+                        <Slider label="Metallic" value={matMetallic} onChange={setMatMetallic} onPointerUp={pushToHistory} />
                     </div>
+
 
                     <Divider />
                 </div>

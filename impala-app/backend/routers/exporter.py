@@ -76,25 +76,25 @@ async def crop_project(project_id: str, req: CropRequest):
        "new_url": f"/exports/{project_id}/{output_filename}"
     }
 
-@router.post("/api/projects/{project_id}/export/frame")
-async def export_frame(project_id: str, index: int, frame: UploadFile = File(...)):
-    """Save an individual frame blob."""
-    frames_dir = os.path.join(EXPORT_DIR, project_id, "frames")
-    os.makedirs(frames_dir, exist_ok=True)
+@router.post("/api/projects/{project_id}/export/batch")
+async def export_batch(project_id: str, frames: list[UploadFile] = File(...)):
+    """Save a batch of frames to a temporary directory."""
+    tmp_dir = os.path.join(EXPORT_DIR, project_id, "tmp_frames")
+    os.makedirs(tmp_dir, exist_ok=True)
     
-    # Save as frame_0000.webp, frame_0001.webp, etc.
-    filename = f"frame_{index:04d}.webp"
-    file_path = os.path.join(frames_dir, filename)
-    
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(frame.file, buffer)
-        
-    return {"status": "success", "file": filename}
+    for file in frames:
+        if not file.filename:
+            continue
+        file_path = os.path.join(tmp_dir, file.filename)
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+            
+    return {"status": "success", "count": len(frames)}
 
 @router.post("/api/projects/{project_id}/export/finalize")
 async def finalize_export(project_id: str):
-    """Run FFmpeg to stitch frames into an MP4 video."""
-    frames_dir = os.path.join(EXPORT_DIR, project_id, "frames")
+    """Run FFmpeg to stitch frames from the tmp_frames directory into an MP4 video."""
+    tmp_dir = os.path.join(EXPORT_DIR, project_id, "tmp_frames")
     output_filename = f"export_{uuid.uuid4().hex[:8]}.mp4"
     output_path = os.path.join(EXPORT_DIR, project_id, output_filename)
     
@@ -112,7 +112,7 @@ async def finalize_export(project_id: str):
         raise HTTPException(status_code=404, detail="Original video file missing")
 
     exact_fps = get_video_framerate(original_video_path)
-    input_pattern = os.path.join(frames_dir, "frame_%04d.webp")
+    input_pattern = os.path.join(tmp_dir, "frame_%05d.webp")
     
     cmd = [
         "ffmpeg", "-y",
@@ -134,12 +134,11 @@ async def finalize_export(project_id: str):
     
     try:
         subprocess.run(cmd, check=True, capture_output=True)
+        # Clean up frames only on success
+        shutil.rmtree(tmp_dir, ignore_errors=True)
     except subprocess.CalledProcessError as e:
         print("[FFMPEG ERROR]", e.stderr.decode('utf-8', errors='ignore'))
         raise HTTPException(status_code=500, detail="FFmpeg processing failed")
-    
-    try:
-        shutil.rmtree(frames_dir)
     except Exception as e:
         print(f"[CLEANUP ERROR] Could not remove frames dir: {e}")
         

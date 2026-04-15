@@ -21,7 +21,7 @@ interface SceneSettingsPanelProps {
 }
 
 export const SceneSettingsPanel: React.FC<SceneSettingsPanelProps> = ({ isMinimized }) => {
-    const { envIntensity, setEnvIntensity, envRotation, setEnvRotation, envTint, setEnvTint, videoOpacity, setVideoOpacity, setIsBakingEnv, bakedEnvPreview } = useStore();
+    const { envIntensity, setEnvIntensity, envRotation, setEnvRotation, envTint, setEnvTint, videoOpacity, setVideoOpacity, setIsBakingEnv, bakedEnvPreview, pushToHistory } = useStore();
 
     return (
         <Panel className={isMinimized ? "h-fit w-[280px] pb-[20px]" : "h-full flex flex-col w-[280px] pb-[12px]"}>
@@ -45,6 +45,7 @@ export const SceneSettingsPanel: React.FC<SceneSettingsPanelProps> = ({ isMinimi
                             label="Video Opacity" 
                             value={videoOpacity} 
                             onChange={setVideoOpacity} 
+                            onPointerUp={pushToHistory}
                             className="flex-1"
                         />
                         <CameraIcon className="w-5 h-5 text-text-main shrink-0" />
@@ -55,17 +56,20 @@ export const SceneSettingsPanel: React.FC<SceneSettingsPanelProps> = ({ isMinimi
                             label="Environment Intensity" 
                             value={envIntensity} 
                             onChange={setEnvIntensity} 
+                            onPointerUp={pushToHistory}
                             className="flex-1"
                         />
                         <LightbulbIcon className="w-5 h-5 text-text-main shrink-0" />
                     </div>
 
+
                     <div className="flex items-center gap-[10px]">
                         <ValueInputRow 
                             label="Environment Rotation" 
-                            value={envRotation}
-                            unit="deg" 
-                            onChange={(val) => setEnvRotation(Number(val))} 
+                            value={envRotation} 
+                            onChange={(val) => setEnvRotation(parseFloat(val) || 0)} 
+                            onFinishChange={pushToHistory}
+                            unit="°"
                             className="flex-1"
                         />
                         <PlanetIcon className="w-5 h-5 text-text-main shrink-0" />

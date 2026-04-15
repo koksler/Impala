@@ -11,6 +11,7 @@ color is set to #FFFFFF or #000000
 interface ColorPickerProps {
     color: string;
     onChange: (color: string) => void;
+    onFinishChange?: () => void;
     className?: string;
 }
 
@@ -56,6 +57,7 @@ const hsvToHex = (h: number, s: number, v: number) => {
 export const ColorPicker: React.FC<ColorPickerProps> = ({ 
     color, 
     onChange, 
+    onFinishChange,
     className = '' 
 }) => {
     const [inputValue, setInputValue] = useState(color);
@@ -92,10 +94,18 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
         updateHue(e.clientY);
     };
 
+    const handlePointerUp = (e: React.PointerEvent) => {
+        hueTrackRef.current?.releasePointerCapture(e.pointerId);
+        onFinishChange?.();
+    };
+
     const currentHue = getHSV(color).h;
 
     return (
-        <div className={`w-full flex flex-col gap-[10px] ${className}`}>
+        <div className={`w-full flex flex-col gap-[10px] ${className}`} onPointerUp={() => {
+            // Also catch interaction ends from the HexColorPicker (saturation area)
+            onFinishChange?.();
+        }}>
             <div className="flex items-center gap-[10px]">
                 <div className="flex-1 py-0.5 bg-bg-item rounded-[7px] flex items-center justify-between px-[12px]">
                     <span className="font-sans text-[12px] text-text-main select-none shrink-0">Color</span>
@@ -103,7 +113,15 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
                         type="text"
                         value={inputValue}
                         onChange={handleInputChange}
-                        onBlur={() => setInputValue(color)}
+                        onBlur={() => {
+                            setInputValue(color);
+                            onFinishChange?.();
+                        }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                (e.target as HTMLInputElement).blur();
+                            }
+                        }}
                         className="w-[60px] bg-transparent border-none outline-none text-right font-sans text-[12px] text-text-main uppercase focus:ring-0 p-0 m-0"
                     />
                 </div>
@@ -123,10 +141,10 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
                     ref={hueTrackRef}
                     onPointerDown={handlePointerDown}
                     onPointerMove={handlePointerMove}
-                    onPointerUp={(e) => hueTrackRef.current?.releasePointerCapture(e.pointerId)}
+                    onPointerUp={handlePointerUp}
                     className="relative w-[28px] h-full rounded-[7px] cursor-ns-resize touch-none"
                     style={{
-                        background: 'linear-gradient(to bottom, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%)'
+                        background: 'linear-gradient(to bottom, #f00 0%, #ff0 17%, #0f0 33%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%)'
                     }}
                 >
                     {/* Draggable Thumb */}
@@ -141,4 +159,4 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
             </div>
         </div>
     );
-};
+};

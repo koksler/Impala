@@ -5,6 +5,8 @@ import { ProjectCard } from './projectCard';
 import { Button } from '../buttons/buttons';
 import { UploadModal } from './uploadModal';
 import { Tooltip } from '../Tooltip';
+import { ConfirmationModal } from '../ConfirmationModal';
+import { useStore } from '../../../store';
 
 export interface Project {
     id: string;
@@ -24,6 +26,9 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
     const [projects, setProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+
+    const { addToast } = useStore();
 
      useEffect(() => {
         fetch('/api/projects')
@@ -52,6 +57,26 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
         return `Last opened: ${diff} days ago`;
     };
 
+    const handleDelete = async () => {
+        if (!projectToDelete) return;
+        
+        try {
+            const res = await fetch(`/api/projects/${projectToDelete.id}`, { method: 'DELETE' });
+            if (res.ok) {
+                setProjects(prev => prev.filter(p => p.id !== projectToDelete.id));
+                addToast('Project Deleted', `Successfully removed "${projectToDelete.title}"`, 'success');
+            } else {
+                throw new Error('Failed to delete');
+            }
+        } catch (err) {
+            console.error(err);
+            addToast('Delete Failed', 'Could not delete the project. Is the server running?', 'error');
+        } finally {
+            setProjectToDelete(null);
+        }
+    };
+
+
     return (
         <div className="w-full h-full flex justify-center items-stretch p-[20px] gap-[20px] bg-bg pb-[40px] overflow-hidden">
 
@@ -60,6 +85,17 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
                 onClose={() => setIsModalOpen(false)}
                 onSuccess={handleProjectSuccess}
             />
+
+            <ConfirmationModal
+                isOpen={!!projectToDelete}
+                title="Delete Project"
+                message={`Are you sure you want to permanently delete "${projectToDelete?.title}"? This cannot be undone.`}
+                confirmLabel="Delete"
+                onConfirm={handleDelete}
+                onCancel={() => setProjectToDelete(null)}
+                variant="danger"
+            />
+
 
             <div className="flex flex-col gap-[20px] flex-1 max-w-[1208px]">
                 <BannerCard
@@ -123,8 +159,9 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
                                     date={formatDate(project.lastOpened)}
                                     imageSrc={project.img}
                                     onOpen={() => onOpenProject(project)}
-                                    onDelete={() => console.log('Delete', project.id)}
+                                    onDelete={() => setProjectToDelete(project)}
                                 />
+
                             ))
                     )}
                 </div>
