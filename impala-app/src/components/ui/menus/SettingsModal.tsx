@@ -12,7 +12,8 @@ import {
     LightThemeIcon,
     DarkThemeIcon,
     SystemThemeIcon,
-    MinimizeIcon
+    MinimizeIcon,
+    UndoIcon
 } from '../../icons/index';
 
 export const SettingsModal: React.FC = () => {
@@ -40,6 +41,8 @@ export const SettingsModal: React.FC = () => {
         setLanguage,
         cameraPreset,
         setCameraPreset,
+        exportDirectory,
+        setExportDirectory,
         addToast,
         updateToast,
     } = useStore();
@@ -119,13 +122,27 @@ export const SettingsModal: React.FC = () => {
                                 <span className="text-text-main/60 text-[12px]">Accent color throughout whole UI.</span>
                             </div>
 
-                            <div className="bg-accent rounded-[12px] pr-1.5 pl-1.5 pt-4 pb-4 flex items-center justify-center w-[250px]">
-                                <TextInputRow
-                                    label="Color"
-                                    value={primaryColor}
-                                    onChange={(v) => { if (/^#([A-Fa-f0-9]{3}){1,2}$/.test(v)) setPrimaryColor(v); }}
-                                    className=''
-                                />
+                            <div className="flex items-center gap-3">
+                                <Button 
+                                    variant="misc" 
+                                    onClick={() => setPrimaryColor('#FF763B')}
+                                    title="Revert to default"
+                                    className="opacity-60 hover:opacity-100"
+                                >
+                                    <UndoIcon className="w-5 h-5 text-text-main" />
+                                </Button>
+
+                                <div className="bg-accent rounded-[12px] flex items-center justify-center w-[250px] px-1.5 py-4">
+                                    <TextInputRow
+                                        label="Color"
+                                        value={primaryColor}
+                                        onChange={(v) => {
+                                            let val = v.startsWith('#') ? v : '#' + v;
+                                            if (val.length <= 7) setPrimaryColor(val);
+                                        }}
+                                        className='w-full'
+                                    />
+                                </div>
                             </div>
                         </div>
 
@@ -258,9 +275,9 @@ export const SettingsModal: React.FC = () => {
                             </div>
                             <div className="flex justify-end">
                                 <TextInputRow
-                                
-                                label=""
-                                value="C:/Impala/backend/exports/"
+                                    label=""
+                                    value={exportDirectory}
+                                    onChange={setExportDirectory}
                                 />
                             </div>
                         </div>
