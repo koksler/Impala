@@ -9,7 +9,7 @@ interface ConfirmationModalProps {
     cancelLabel?: string;
     onConfirm: () => void;
     onCancel: () => void;
-    variant?: 'danger' | 'info';
+    variant?: 'danger' | 'info' | 'warning';
 }
 
 export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
@@ -36,10 +36,10 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none">
             {/* Backdrop */}
             <div 
-                className={`absolute inset-0 bg-black/5 transition-opacity duration-300 pointer-events-auto ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+                className={`absolute inset-0 bg-black/20 transition-opacity duration-300 pointer-events-auto ${isVisible ? 'opacity-100' : 'opacity-0'}`}
                 onClick={onCancel}
             />
 
@@ -70,7 +70,10 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                         <Button 
                             variant="accent" 
                             onClick={onConfirm}
-                            className={`flex-1 px-4 !h-9 ${variant === 'danger' ? 'bg-fail border-fail text-white' : ''}`}
+                            className={`flex-1 px-4 !h-9 ${
+                                variant === 'danger' ? 'bg-fail border-fail text-white' : 
+                                variant === 'warning' ? 'bg-process border-process text-white' : ''
+                            }`}
                         >
                             {confirmLabel}
                         </Button>
@@ -78,7 +81,10 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 </div>
 
                 {/* Bottom Accent Line (Mirrors Toast Progress Bar) */}
-                <div className={`absolute bottom-0 left-0 w-full h-[4px] ${variant === 'danger' ? 'bg-fail' : 'bg-accent'}`} />
+                <div className={`absolute bottom-0 left-0 w-full h-[4px] ${
+                    variant === 'danger' ? 'bg-fail' : 
+                    variant === 'warning' ? 'bg-process' : 'bg-accent'
+                }`} />
             </div>
         </div>
     );

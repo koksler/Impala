@@ -80,7 +80,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                         {/* Export Action */}
                         <Tooltip content="Export Project" position="bottom">
-                            <Button variant="accent" onClick={startExportPipeline} disabled={isExporting}>
+                            <Button variant="accent" onClick={() => useStore.getState().setIsRenderModalOpen(true)}>
                                 {isExporting ? 'Rendering...' : 'Export'}
                             </Button>
                         </Tooltip>

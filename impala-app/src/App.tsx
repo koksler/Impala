@@ -4,6 +4,7 @@ import { HomePage, type Project } from './components/ui/menus/homePage';
 import { EditorView } from './components/layouts/EditorView';
 import { useStore } from './store';
 import { SettingsModal } from './components/ui/menus/SettingsModal';
+import { RenderModal } from './components/ui/menus/RenderModal';
 
 import { ToastContainer } from './components/ui/ToastContainer';
 import { InitialLoader } from './components/ui/InitialLoader';
@@ -352,6 +353,7 @@ export default function App() {
       <InitialLoader />
       {/* Conditional Modals */}
       {useStore((s) => s.isSettingsOpen) && <SettingsModal />}
+      {useStore((s) => s.isRenderModalOpen) && <RenderModal />}
     </div>
   );
 }

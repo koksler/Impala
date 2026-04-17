@@ -27,6 +27,7 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+    const [projectToOpen, setProjectToOpen] = useState<Project | null>(null);
 
     const { addToast, backendUrl } = useStore();
 
@@ -87,13 +88,26 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
             />
 
             <ConfirmationModal
-                isOpen={!!projectToDelete}
-                title="Delete Project"
-                message={`Are you sure you want to permanently delete "${projectToDelete?.title}"? This cannot be undone.`}
-                confirmLabel="Delete"
-                onConfirm={handleDelete}
-                onCancel={() => setProjectToDelete(null)}
-                variant="danger"
+                isOpen={!!projectToDelete || !!projectToOpen}
+                title={projectToDelete ? "Delete Project" : "Open Project"}
+                message={projectToDelete 
+                    ? `Are you sure you want to permanently delete "${projectToDelete?.title}"? This cannot be undone.`
+                    : `Do you want to open "${projectToOpen?.title}" and continue editing?`
+                }
+                confirmLabel={projectToDelete ? "Delete" : "Open"}
+                onConfirm={() => {
+                    if (projectToDelete) {
+                        handleDelete();
+                    } else if (projectToOpen) {
+                        onOpenProject(projectToOpen);
+                        setProjectToOpen(null);
+                    }
+                }}
+                onCancel={() => {
+                    setProjectToDelete(null);
+                    setProjectToOpen(null);
+                }}
+                variant={projectToDelete ? "danger" : "warning"}
             />
 
 
@@ -158,7 +172,7 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
                                     title={project.title}
                                     date={formatDate(project.lastOpened)}
                                     imageSrc={project.img}
-                                    onOpen={() => onOpenProject(project)}
+                                    onOpen={() => setProjectToOpen(project)}
                                     onDelete={() => setProjectToDelete(project)}
                                 />
 

@@ -42,6 +42,7 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
   }, [videoElement]);
 
   return (
+    <div className="main-canvas-wrapper w-full h-full">
       <Canvas 
         className="w-full h-full absolute inset-0 z-10 pointer-events-auto" 
         camera={{ position: [0, 2, 5], fov: 45 }} 
@@ -83,7 +84,7 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
           <GaussianScene url={splatUrl} visible={showSplat} />
           {/* Real-world geometry proxy handling shadows and occlusion mask! */}
           <ProxyMesh url={proxyUrl} isExporting={isExporting} />
-          {showCameraPath && <CameraPath />}
+          {showCameraPath && !isExporting && !cameraEnabled && <CameraPath />}
         </group>
 
         {!isExporting && transformTarget === 'scene' && !isCropping && (activeTool === 'translate' || activeTool === 'rotate' || activeTool === 'scale') && sceneGroupWrapper && (
@@ -198,5 +199,6 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
       <CameraSync />
       <OrbitControls makeDefault={!cameraEnabled && !isPlaying} enabled={!cameraEnabled && !isPlaying} />
     </Canvas>
+    </div>
   );
 };

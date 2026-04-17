@@ -6,7 +6,9 @@ import { useStore } from '../../store';
 const WORLD_ROTATION = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
 
 export const CameraPath = () => {
-    const { cameraData, currentFrame } = useStore();
+    const { cameraData, currentFrame, isExporting } = useStore();
+
+    if (isExporting) return null;
 
     const points = useMemo(() => {
         if (!cameraData || !Array.isArray(cameraData)) return [];
