@@ -36,6 +36,10 @@ export const CustomModel = ({ url, onLowestPoint }: { url: string, onLowestPoint
         const box = new THREE.Box3().setFromObject(cloned);
         const center = new THREE.Vector3();
         box.getCenter(center);
+
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        useStore.getState().setObjBounds([size.x, size.y, size.z]);
         
         // Offset the scene so its visual center is at [0,0,0]
         // This ensures TransformControls (attached to the parent group) are centered on the model

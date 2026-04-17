@@ -576,7 +576,8 @@ const storeCreator: StateCreator<AppState, [['zustand/persist', unknown]], []> =
                         }
                     };
                     videoElement.addEventListener('seeked', onSeeked);
-                    videoElement.currentTime = (totalFrames > 1 ? i / (totalFrames - 1) : 0) * videoElement.duration;
+                    const targetTime = (totalFrames > 1 ? i / (totalFrames - 1) : 0) * videoElement.duration;
+                    videoElement.currentTime = Math.min(targetTime, videoElement.duration - 0.001);
                     setTimeout(onSeeked, 200);
                 });
 

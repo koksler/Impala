@@ -6,6 +6,7 @@ import { Button } from '../buttons/buttons';
 import { UploadModal } from './uploadModal';
 import { Tooltip } from '../Tooltip';
 import { ConfirmationModal } from '../ConfirmationModal';
+import { ImportModal } from './importModal';
 import { useStore } from '../../../store';
 
 export interface Project {
@@ -26,6 +27,7 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
     const [projects, setProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
     const [projectToOpen, setProjectToOpen] = useState<Project | null>(null);
 
@@ -46,6 +48,7 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
 
     const handleProjectSuccess = (newProject: Project) => {
         setIsModalOpen(false);
+        setIsImportModalOpen(false);
         setProjects(prev => [newProject, ...prev]);
         onOpenProject(newProject);
     };
@@ -84,6 +87,12 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
             <UploadModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
+                onSuccess={handleProjectSuccess}
+            />
+
+            <ImportModal 
+                isOpen={isImportModalOpen}
+                onClose={() => setIsImportModalOpen(false)}
                 onSuccess={handleProjectSuccess}
             />
 
@@ -142,7 +151,7 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
                     imageSrc="/banners/abstract.png"
                     buttons={
                         <Tooltip content="Upload .ply file" position="top">
-                            <Button variant="accent">
+                            <Button variant="accent" onClick={() => setIsImportModalOpen(true)}>
                                 Load a gaussian splatting scene
                             </Button>
                         </Tooltip>

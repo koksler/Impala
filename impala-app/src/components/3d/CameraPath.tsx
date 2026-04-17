@@ -70,7 +70,7 @@ export const CameraPath = () => {
     if (points.length < 2) return null;
 
     return (
-        <group>
+        <group name="camera-path">
             <Line points={points} color="#FF763B" lineWidth={3} transparent opacity={0.7} />
             <mesh position={points[0]}>
                 <sphereGeometry args={[0.05, 16, 16]} />

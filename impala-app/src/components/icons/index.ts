@@ -44,3 +44,5 @@ export { default as PathIcon } from './pathIcon.svg?react';
 export { default as LightThemeIcon } from './LightTheme.svg?react';
 export { default as DarkThemeIcon } from './DarkTheme.svg?react';
 export { default as SystemThemeIcon } from './SystemTheme.svg?react';
+export { default as CorrectIcon } from './Correct.svg?react';
+export { default as NotCorrectIcon } from './NotCorrect.svg?react';

@@ -6,7 +6,13 @@ import os
 import uuid
 import json
 from datetime import datetime
-from ml_pipeline import run_nerfstudio_pipeline
+try:
+    from ml_pipeline import run_nerfstudio_pipeline
+    ML_SUPPORTED = True
+except ImportError:
+    ML_SUPPORTED = False
+    print("ML Pipeline disabled: Nerfstudio or Torch not found. Running in Viewer/Export mode.")
+
 import glob
 import numpy as np
 from plyfile import PlyData, PlyElement
@@ -62,6 +68,12 @@ def get_status():
 
 @app.post("/api/upload")
 async def upload_file(background_tasks: BackgroundTasks, file: UploadFile = File(...), title: str = Form(...)):
+    if not ML_SUPPORTED:
+        raise HTTPException(
+            status_code=501, 
+            detail="This server does not support CUDA training. Use 'Import Project' instead."
+        )
+
     project_id = str(uuid.uuid4())
     _, ext = os.path.splitext(file.filename)
     safe_filename = f"{project_id}{ext}"
@@ -134,10 +146,18 @@ def get_project_tracking(project_id: str):
 
 @app.get("/api/projects/{project_id}/dataparser-transforms")
 def get_dataparser_transforms(project_id: str):
+    # Try the high-priority Nerfstudio output path first
     search_pattern = os.path.join("outputs", project_id, "splatfacto", "*", "dataparser_transforms.json")
     dp_paths = glob.glob(search_pattern)
+    
+    # Try the project export path as a fallback (for imported projects)
+    export_path = os.path.join(EXPORT_DIR, project_id, "dataparser_transforms.json")
+    if os.path.exists(export_path):
+        dp_paths.append(export_path)
+
     if not dp_paths:
         return {"error": "Dataparser transforms not found"}
+    
     latest_dp = max(dp_paths, key=os.path.getctime)
     with open(latest_dp, "r") as f:
         return json.load(f)
@@ -172,7 +192,45 @@ def get_project_cameras(project_id: str):
                     "camera_angle_x", "camera_angle_y", "camera_model"):
             if key in colmap and colmap[key] is not None:
                 intrinsics[key] = colmap[key]
+    
+    # FALLBACK: If colmap didn't have it, check the raw camera file (Nerfstudio exports these)
+    # Some files have these at the root (dict), others have them in every frame (list/dict)
+    if isinstance(cameras_raw, dict):
+        print(f"[DEBUG] cameras_raw is dict. Keys: {list(cameras_raw.keys())[:20]}")
+        for key in ("fl_x", "fl_y", "cx", "cy", "w", "h",
+                    "camera_angle_x", "camera_angle_y", "camera_model"):
+            if key not in intrinsics and key in cameras_raw:
+                intrinsics[key] = cameras_raw[key]
 
+    # If we STILL don't have them, check the first frame (some exporters put intrinsics there)
+    if ("fl_y" not in intrinsics or "h" not in intrinsics) and frames:
+        first_frame = frames[0]
+        if isinstance(first_frame, dict):
+            print(f"[DEBUG] first_frame keys: {list(first_frame.keys())}")
+            for key in ("fl_x", "fl_y", "cx", "cy", "w", "h", "camera_angle_x", "camera_angle_y"):
+                if key not in intrinsics and key in first_frame:
+                    intrinsics[key] = first_frame[key]
+
+    # DEEP FALLBACK: If we're still missing FOV, check if the frames point to ANOTHER project's assets
+    # (Common when importing a project that references an existing processed_data folder)
+    if ("fl_y" not in intrinsics or "h" not in intrinsics) and frames:
+        import re
+        for f in frames[:5]: # Check first 5 frames for reference paths
+            fp = f.get("file_path", "")
+            match = re.search(r'processed_data[\\/]([a-f0-9\-]{36})', fp)
+            if match:
+                other_id = match.group(1)
+                other_colmap = f"processed_data/{other_id}/transforms.json"
+                if os.path.exists(other_colmap):
+                    print(f"[DEBUG] Recovering metadata from linked project: {other_id}")
+                    with open(other_colmap, "r") as other_f:
+                        other_data = json.load(other_f)
+                        for key in ("fl_x", "fl_y", "cx", "cy", "w", "h", "camera_angle_x", "camera_angle_y"):
+                            if key not in intrinsics and key in other_data:
+                                intrinsics[key] = other_data[key]
+                    break
+
+    print(f"[DEBUG] Final intrinsics: {intrinsics}")
     return {"frames": frames, **intrinsics}
 
 class SaveSettings(BaseModel):

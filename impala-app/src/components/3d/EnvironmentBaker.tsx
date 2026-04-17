@@ -35,12 +35,12 @@ export const EnvironmentBaker = () => {
                 if (child.name === 'custom-model-group' || 
                     child.name === 'editor-grid' || 
                     child.name === 'crop-cube' ||
-                    // Hide any TransformControls elements
-                    child.type === 'TransformControls' ||
-                    // Exclude the Shadow Catcher plane
                     child.name === 'shadow-catcher' ||
-                    // Also hide the Gaussian splat bounding box if it has one
-                    child.name === 'splat-bounds') {
+                    child.name === 'splat-bounds' ||
+                    child.name === 'camera-path' ||
+                    child.type === 'TransformControls' ||
+                    child.type === 'DirectionalLightHelper' ||
+                    child.type === 'AxesHelper') {
                     
                     hiddenObjects.push({ obj: child, visible: child.visible });
                     child.visible = false;

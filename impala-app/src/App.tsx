@@ -174,30 +174,29 @@ export default function App() {
           //   4. default 45°
           let fov = 45;
           let fovSource = 'default-45';
-          const first = frames[0];
-          const frameH = first.h ?? data.h;
-          const frameFlY = first.fl_y ?? data.fl_y;
-
-          console.log('[FOV] Intrinsics →', {
-            'first.fl_y': first.fl_y, 'data.fl_y': data.fl_y, 'resolved fl_y': frameFlY,
-            'first.h': first.h, 'data.h': data.h, 'resolved h': frameH,
-            'camera_angle_x': data.camera_angle_x,
-            'camera_angle_y': data.camera_angle_y,
-          });
+          
+          // Find first frame with metadata (some frames might be sparse)
+          const metaFrame = frames.find((f: any) => (f.fl_y || f.fl_x || f.camera_angle_x || f.camera_angle_y)) || frames[0] || {};
+          
+          const frameH = metaFrame?.h ?? data.h;
+          const frameFlY = metaFrame?.fl_y ?? data.fl_y;
 
           if (frameFlY && frameH) {
             fov = (2 * Math.atan(frameH / (2 * frameFlY))) * (180 / Math.PI);
             fovSource = `fl_y+h (${frameFlY.toFixed(1)} / ${frameH})`;
-          } else if (data.camera_angle_y) {
-            fov = data.camera_angle_y * (180 / Math.PI);
-            fovSource = `camera_angle_y=${data.camera_angle_y.toFixed(4)} rad`;
-          } else if (data.camera_angle_x) {
-            const w = data.w || first.w || 1920;
-            const h = data.h || first.h || 1080;
-            const hFovRad = data.camera_angle_x;
-            fov = (2 * Math.atan(Math.tan(hFovRad / 2) * (h / w))) * (180 / Math.PI);
-            fovSource = `camera_angle_x→vFOV (${hFovRad.toFixed(4)} rad, ${w}×${h})`;
+          } else if (data.camera_angle_y || metaFrame?.camera_angle_y) {
+            const angY = data.camera_angle_y || metaFrame?.camera_angle_y;
+            fov = angY * (180 / Math.PI);
+            fovSource = `camera_angle_y=${angY.toFixed(4)} rad`;
+          } else if (data.camera_angle_x || metaFrame?.camera_angle_x) {
+            const fw = data.w || metaFrame?.w || 1920;
+            const fh = data.h || metaFrame?.h || 1080;
+            const hFovRad = data.camera_angle_x || metaFrame?.camera_angle_x;
+            fov = (2 * Math.atan(Math.tan(hFovRad / 2) * (fh / fw))) * (180 / Math.PI);
+            fovSource = `camera_angle_x→vFOV (${hFovRad.toFixed(4)} rad, ${fw}×${fh})`;
           }
+
+          console.log(`[FOV] Calculated: ${fov.toFixed(2)}° (source: ${fovSource}) | Res: ${data.w || 1920}×${data.h || 1080}`);
 
           // Frame matching and interpolation logic
           // Colmap drops blurry frames, meaning 'frames' is sparse compared to the actual video.
@@ -310,8 +309,8 @@ export default function App() {
             setCameraData(finalFrames, fov);
           }
 
-          const w = data.w || first.w || 1920;
-          const h = data.h || first.h || 1080;
+          const w = data.w || metaFrame?.w || 1920;
+          const h = data.h || metaFrame?.h || 1080;
           setVideoDimensions(w, h);
 
           console.log(`[FOV] Result: ${fov.toFixed(2)}° (source: ${fovSource}) | Res: ${w}×${h}`);

@@ -22,7 +22,7 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
     bakedEnvTexture, isExporting,
     // Add export pipeline dependencies
     currentFrame, totalFrames, setPlaying, updateToast, preExportState,
-    pushToHistory
+    pushToHistory, objBounds
   } = useStore();
   
   const [cube, setCube] = useState<THREE.Object3D | null>(null);
@@ -60,22 +60,20 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
       <ambientLight intensity={envIntensity * 0.4} />
       
       <directionalLight 
-        position={[objPos[0] + 5, objPos[1] + 10, objPos[2] + 5]} 
+        position={[Math.sin(envRotation * (Math.PI / 180)) * 5, 5, Math.cos(envRotation * (Math.PI / 180)) * 5]} 
         target={lightTarget}
-        // Lower direct intensity so the IBL does the heavy lifting for realistic scene color
-        intensity={envIntensity * 0.6} 
+        intensity={envIntensity} 
         color={envTint !== '#ffffff' && envTint !== '#FFFFFF' ? envTint : undefined} 
         castShadow 
-        shadow-mapSize={[2048, 2048]} 
-        shadow-camera-left={-3}
-        shadow-camera-right={3}
-        shadow-camera-top={3}
-        shadow-camera-bottom={-3}
+        shadow-mapSize={[4096, 4096]} 
+        shadow-camera-left={-10}
+        shadow-camera-right={10}
+        shadow-camera-top={10}
+        shadow-camera-bottom={-10}
         shadow-camera-near={0.5}
-        shadow-camera-far={50}
-        shadow-bias={-0.001}
+        shadow-camera-far={20}
+        shadow-bias={-0.0001}
         shadow-normalBias={0.02}
-        // Cap the blur multiplier to prevent the PCF dithering noise seen in the screenshots
         shadow-radius={shadowBlur * 4}
       />
 
@@ -155,7 +153,9 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
           )}
 
           {!isExporting && !cameraEnabled && showGrid && (
-            <Grid infiniteGrid fadeDistance={50} sectionColor="#FF763B" cellColor="#666666" />
+            <group name="editor-grid">
+              <Grid infiniteGrid fadeDistance={50} sectionColor="#FF763B" cellColor="#666666" />
+            </group>
           )}
 
           {showModels && customModelUrl && (
@@ -166,28 +166,28 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
             </group>
           )}
 
-          {/* Improved Shadow Catcher: Now a circle with explicit renderOrder for better occlusion by proxies */}
-          <mesh 
-            name="shadow-catcher"
-            renderOrder={0} 
-            rotation={[-Math.PI / 2, 0, 0]} 
-            position={[objPos[0], objPos[1] + (localModelLowestY * objScale[1]) + 0.001, objPos[2]]} 
-            receiveShadow
-          >
-              <circleGeometry args={[15, 64]} />
-              <shadowMaterial 
-                transparent 
-                opacity={shadowOpacity} 
-                color={shadowColor} 
-                // Explicitly respect the depth buffer written by the ProxyMesh
-                depthTest={true} 
-                depthWrite={false} 
-              />
-          </mesh>
+          <group position={objPos} rotation={objRot}>
+            <mesh 
+                name="shadow-catcher"
+                renderOrder={0} 
+                rotation={[-Math.PI / 2, 0, 0]} 
+                position={[0, -objBounds[1] / 2 + 0.001, 0]} 
+                receiveShadow
+            >
+                <circleGeometry args={[15, 64]} />
+                <shadowMaterial 
+                    transparent 
+                    opacity={shadowOpacity} 
+                    color={shadowColor} 
+                    depthTest={true} 
+                    depthWrite={false} 
+                />
+            </mesh>
+          </group>
         </group>
 
         {bakedEnvTexture ? (
-             <Environment map={bakedEnvTexture} environmentIntensity={envIntensity} environmentRotation={[0, envRotation * (Math.PI / 180), 0]} />
+             <Environment map={bakedEnvTexture} background={false} environmentIntensity={envIntensity} environmentRotation={[0, envRotation * (Math.PI / 180), 0]} />
         ) : videoEnvTexture ? (
              <Environment map={videoEnvTexture} environmentIntensity={envIntensity} environmentRotation={[0, envRotation * (Math.PI / 180), 0]} />
         ) : (

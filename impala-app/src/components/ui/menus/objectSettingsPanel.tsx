@@ -1,4 +1,5 @@
 import React from 'react';
+import * as THREE from 'three';
 import { Panel } from '../panel';
 import { Divider } from '../divider';
 import { SectionHeader } from '../sectionHeader';
@@ -44,8 +45,70 @@ export const ObjectSettingsPanel: React.FC<ObjectSettingsPanelProps> = ({isMinim
         customModelName,
         setCustomModelUrl,
         setCustomModelName,
-        pushToHistory
+        pushToHistory,
+        activeProjectId,
+        backendUrl,
+        setActiveSplatUrl,
+        addToast,
+        updateToast,
+        objBounds,
+        splatViewer
     } = useStore();
+
+    const handleClearAroundObject = async () => {
+        if (!activeProjectId) return;
+
+        const padding = 1.2;
+        // Parent world transform of the object clip - matching the [0, -1.5, 0] offset in EditorCanvas
+        const objLocalMatrix = new THREE.Matrix4().compose(
+            new THREE.Vector3(...objPos),
+            new THREE.Quaternion().setFromEuler(new THREE.Euler(...objRot)),
+            new THREE.Vector3(
+                objScale[0] * objBounds[0] * padding, 
+                objScale[1] * objBounds[1] * padding, 
+                objScale[2] * objBounds[2] * padding
+            )
+        );
+        const parentTranslation = new THREE.Matrix4().makeTranslation(0, -1.5, 0);
+        const objWorldMatrix = parentTranslation.multiply(objLocalMatrix);
+        const inverseMatrix = objWorldMatrix.invert();
+
+        // Account for splat's local rotation/transform (the -90deg X rotation in GaussianScene)
+        const splatWorldMatrix = new THREE.Matrix4();
+        if (splatViewer) {
+            // DropInViewer's splat mesh
+            const mesh = splatViewer.splatMeshes?.[0] || splatViewer.splatMesh;
+            if (mesh) {
+                mesh.updateMatrixWorld(true);
+                splatWorldMatrix.copy(mesh.matrixWorld);
+            } else {
+                splatWorldMatrix.makeRotationX(-Math.PI / 2);
+            }
+        } else {
+            splatWorldMatrix.makeRotationX(-Math.PI / 2);
+        }
+
+        // Combine: P_local_crop = Inverse(Crop_World) * Splat_World * P_raw_splat
+        const finalMatrix = inverseMatrix.multiply(splatWorldMatrix);
+
+        const toastId = addToast("Clearing collisions...", "Processing splat deletion around object...", "process");
+
+        try {
+            const res = await fetch(`${backendUrl}/api/projects/${activeProjectId}/crop-inside`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ inverse_matrix: Array.from(finalMatrix.elements) })
+            });
+
+            if (!res.ok) throw new Error("Failed to clear splats");
+
+            const data = await res.json();
+            setActiveSplatUrl(data.new_url);
+            updateToast(toastId, { type: 'success', title: 'Collisions Cleared', message: 'Gaussian splats around the object have been removed.' });
+        } catch (err) {
+            updateToast(toastId, { type: 'error', title: 'Clear Failed', message: 'Could not process reverse crop.' });
+        }
+    };
 
     const pos = transformTarget === 'object' ? objPos : scenePos;
     const rot = transformTarget === 'object' ? objRot : sceneRot;
@@ -167,6 +230,16 @@ export const ObjectSettingsPanel: React.FC<ObjectSettingsPanelProps> = ({isMinim
                                     }}
                                 >
                                     Snap to Floor
+                                </Button>
+                            </Tooltip>
+                        )}
+                        {transformTarget === 'object' && customModelName && (
+                            <Tooltip content="Permanently delete splats colliding with the object" position="top">
+                                <Button 
+                                    variant="full"
+                                    onClick={handleClearAroundObject}
+                                >
+                                    Clear Splats Around Object
                                 </Button>
                             </Tooltip>
                         )}
