@@ -28,10 +28,10 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
 
-    const { addToast } = useStore();
+    const { addToast, backendUrl } = useStore();
 
      useEffect(() => {
-        fetch('/api/projects')
+        fetch(`${backendUrl}/api/projects`)
             .then(res => res.json())
             .then((data: Project[]) => {
                 setProjects(data);
@@ -61,7 +61,7 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
         if (!projectToDelete) return;
         
         try {
-            const res = await fetch(`/api/projects/${projectToDelete.id}`, { method: 'DELETE' });
+            const res = await fetch(`${backendUrl}/api/projects/${projectToDelete.id}`, { method: 'DELETE' });
             if (res.ok) {
                 setProjects(prev => prev.filter(p => p.id !== projectToDelete.id));
                 addToast('Project Deleted', `Successfully removed "${projectToDelete.title}"`, 'success');

@@ -285,3 +285,104 @@ def delete_project(project_id: str):
         del project_status_db[project_id]
 
     return {"status": "deleted", "project_id": project_id}
+
+
+@app.post("/api/cache/clear")
+def clear_cache():
+    """Safely clear processed_data/ and uploads/ contents not in projects.json."""
+    if not os.path.exists(PROJECTS_FILE):
+        return {"deleted_files": 0, "deleted_bytes": 0}
+
+    try:
+        with open(PROJECTS_FILE, "r") as f:
+            content = f.read().strip()
+            if not content:
+                print("[CACHE CLEAR] projects.json is empty. Skipping purge for safety.")
+                return {"deleted_files": 0, "deleted_bytes": 0, "error": "Empty projects file"}
+            projects = json.loads(content)
+    except Exception as e:
+        print(f"[CACHE CLEAR] Failed to read projects.json: {e}")
+        return {"deleted_files": 0, "deleted_bytes": 0, "error": str(e)}
+
+    # Case-insensitive set of project IDs
+    active_ids = {str(p["id"]).lower() for p in projects if "id" in p}
+    active_files = set()
+    for p in projects:
+        if p.get("video_url"):
+            active_files.add(os.path.basename(p["video_url"]).lower())
+
+    deleted_files = 0
+    deleted_bytes = 0
+
+    # 1. Clean processed_data/
+    processed_dir = "processed_data"
+    if os.path.exists(processed_dir):
+        for d in os.listdir(processed_dir):
+            if d.lower() not in active_ids:
+                path = os.path.join(processed_dir, d)
+                if not os.path.isdir(path): continue
+                try:
+                    bytes_size = sum(os.path.getsize(os.path.join(dirpath, filename)) for dirpath, _, filenames in os.walk(path) for filename in filenames)
+                    shutil.rmtree(path)
+                    deleted_files += 1
+                    deleted_bytes += bytes_size
+                    print(f"[CACHE CLEAR] Removed processed_data/{d}")
+                except Exception as e:
+                    print(f"[CACHE CLEAR] Error removing {d}: {e}")
+
+    # 2. Clean uploads/
+    if os.path.exists(UPLOAD_DIR):
+        for f in os.listdir(UPLOAD_DIR):
+            if f.lower() not in active_files:
+                path = os.path.join(UPLOAD_DIR, f)
+                if os.path.isdir(path): continue
+                try:
+                    size = os.path.getsize(path)
+                    os.remove(path)
+                    deleted_files += 1
+                    deleted_bytes += size
+                    print(f"[CACHE CLEAR] Removed uploads/{f}")
+                except Exception as e:
+                    print(f"[CACHE CLEAR] Error removing upload {f}: {e}")
+
+    return {
+        "status": "success",
+        "deleted_files": deleted_files,
+        "deleted_bytes": deleted_bytes
+    }
+
+@app.post("/api/projects/cleanup")
+def cleanup_projects():
+    """Purge orphaned folders from exports/ and projects_assets/."""
+    if not os.path.exists(PROJECTS_FILE):
+        return {"deleted_files": 0}
+
+    try:
+        with open(PROJECTS_FILE, "r") as f:
+            content = f.read().strip()
+            if not content:
+                print("[PURGE] projects.json is empty. Skipping purge for safety.")
+                return {"deleted_files": 0, "error": "Empty projects file"}
+            projects = json.loads(content)
+    except Exception as e:
+        print(f"[PURGE] Failed to read projects.json: {e}")
+        return {"deleted_files": 0, "error": str(e)}
+
+    active_ids = {str(p["id"]).lower() for p in projects if "id" in p}
+    deleted_count = 0
+
+    for base_dir in [EXPORT_DIR, "projects_assets", "outputs"]:
+        if os.path.exists(base_dir):
+            for d in os.listdir(base_dir):
+                full_path = os.path.join(base_dir, d)
+                if not os.path.isdir(full_path): continue
+                
+                if d.lower() not in active_ids:
+                    try:
+                        shutil.rmtree(full_path)
+                        deleted_count += 1
+                        print(f"[PURGE] Removed orphaned folder {base_dir}/{d}")
+                    except Exception as e:
+                        print(f"[PURGE] Error removing {base_dir}/{d}: {e}")
+    
+    return {"status": "success", "deleted_files": deleted_count}

@@ -10,14 +10,21 @@ export const CameraSync = () => {
     const {
       cameraData, currentFrame, isPlaying, cameraEnabled,
       setCurrentFrame, totalFrames, cameraFov, videoDimensions,
-      scenePos, sceneRot, sceneScale
+      scenePos, sceneRot, sceneScale, framerateLimit
     } = useStore();
     const clockRef = useRef(0);
   
     useFrame((_, delta) => {
       if (!cameraEnabled || !isPlaying || totalFrames === 0) return;
+      
+      const limit = framerateLimit === '30 FPS' ? 30 : framerateLimit === '60 FPS' ? 60 : 0;
+      const interval = limit > 0 ? 1 / limit : 0;
+      
       clockRef.current += delta;
-      if (clockRef.current >= 1 / 24) {
+      
+      // We still want to sync with the video which is likely 24 or 30 fps
+      // But we can throttle the actual state updates to match the user's preference
+      if (clockRef.current >= (interval || 1/24)) {
         setCurrentFrame((currentFrame + 1) % totalFrames);
         clockRef.current = 0;
       }

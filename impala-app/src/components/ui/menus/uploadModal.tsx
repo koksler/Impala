@@ -50,7 +50,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
     // ===============================
 
     const handleStart = async () => {
-        const { addToast } = useStore.getState();
+        const { addToast, backendUrl } = useStore.getState();
         if (!file) {
             addToast("Upload Missing", "Please select a file first!", "error");
             return;
@@ -63,7 +63,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
         formData.append("title", projectName);
 
         try {
-            const uploadRes = await fetch("/api/upload", {
+            const uploadRes = await fetch(`${backendUrl}/api/upload`, {
                 method: "POST",
                 body: formData,
             });
@@ -73,7 +73,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
                 setStatus('processing');
                 
                 const interval = setInterval(async () => {
-                    const statusRes = await fetch(`/api/projects/${data.project_id}/status`);
+                    const statusRes = await fetch(`${backendUrl}/api/projects/${data.project_id}/status`);
                     const statusData = await statusRes.json();
 
                     setProgress(statusData.progress || 0);
@@ -98,7 +98,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm pointer-events-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 pointer-events-auto">
             <div className="w-[480px] bg-bg border border-text-main rounded-[16px] p-[24px] shadow-2xl flex flex-col gap-[20px]">
                 <h2 className="text-[24px] font-bold text-text-accent m-0">Create New Project</h2>
 

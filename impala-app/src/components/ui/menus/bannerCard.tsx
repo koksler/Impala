@@ -24,7 +24,7 @@ export const BannerCard: React.FC<BannerCardProps> = ({ title, subtitle, imageSr
                 </div>
             </div>
 
-            <div className="flex items-center justify-center w-[40%] h-full bg-text-main">
+            <div className="flex items-center justify-center w-[40%] h-full bg-[#161616]">
                 <img src={imageSrc} alt="Banner graphic" className="w-full h-full object-none object-center" />
             </div>
         </div>

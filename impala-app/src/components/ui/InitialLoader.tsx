@@ -11,7 +11,7 @@ export const InitialLoader: React.FC = () => {
     return (
         <div className="fixed inset-0 z-[200] bg-bg flex flex-col items-center justify-center p-8 transition-opacity duration-500">
             <div className="w-full max-w-[400px] flex flex-col items-center gap-8">
-                <div className="w-[120px] h-[120px] text-accent">
+                <div className="w-[120px] h-[120px] text-text-main">
                     <ImpalaLogoIcon className="w-full h-full" />
                 </div>
                 

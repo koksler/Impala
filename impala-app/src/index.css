@@ -18,6 +18,17 @@
   --color-text-main: #161616;
 }
 
+.dark {
+  --color-bg: #161616;
+  --color-bg-item: #2F2F2F;
+
+  --color-bg-border: #303034;
+  --color-item-border: #484848;
+  
+  --color-text-main: #EBEBEB;
+  --color-text-accent: #FFFFFF;
+}
+
 body {
   @apply font-sans;
 

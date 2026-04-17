@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import * as THREE from 'three';
 
 /** The 3x4 applied_transform matrix + scale from nerfstudio's dataparser_transforms.json.
@@ -63,7 +64,7 @@ interface AppState {
 
     activeTool: string;
     setActiveTool: (tool: string) => void;
-    
+
     videoElement: HTMLVideoElement | null;
     setVideoElement: (el: HTMLVideoElement | null) => void;
 
@@ -128,9 +129,9 @@ interface AppState {
     setActiveSplatUrl: (url: string | null) => void;
     activeProxyUrl: string | null;
     setActiveProxyUrl: (url: string | null) => void;
-    
+
     objBounds: [number, number, number];
-    setObjBounds: (bounds: [number, number, number]) => void;    
+    setObjBounds: (bounds: [number, number, number]) => void;
 
     toasts: Toast[];
     addToast: (title: string, message: string, type: ToastType, id?: string) => string;
@@ -155,6 +156,32 @@ interface AppState {
     undo: () => void;
     redo: () => void;
     clearHistory: () => void;
+
+    // SETTINGS
+    isSettingsOpen: boolean;
+    setIsSettingsOpen: (val: boolean) => void;
+    settingsTab: string;
+    setSettingsTab: (val: string) => void;
+    colorScheme: 'Light' | 'Dark' | 'System';
+    setColorScheme: (val: 'Light' | 'Dark' | 'System') => void;
+    primaryColor: string;
+    setPrimaryColor: (val: string) => void;
+    framerateLimit: string;
+    setFramerateLimit: (val: string) => void;
+    uiScale: string;
+    setUiScale: (val: string) => void;
+    autosave: boolean;
+    setAutosave: (val: boolean) => void;
+    maxIterations: number;
+    setMaxIterations: (val: number) => void;
+    autoCrop: boolean;
+    setAutoCrop: (val: boolean) => void;
+    backendUrl: string;
+    setBackendUrl: (val: string) => void;
+    language: string;
+    setLanguage: (val: string) => void;
+    cameraPreset: string;
+    setCameraPreset: (val: string) => void;
 }
 
 
@@ -167,12 +194,15 @@ interface CameraFrame {
 }
 
 
-export const useStore = create<AppState>((set) => ({
+export const useStore = create<AppState>()(
+    persist(
+        (set, get) => ({
     serverStatus: 'checking',
 
     checkServerStatus: async () => {
         try {
-            const response = await fetch("/api/status");
+            const baseUrl = get().backendUrl;
+            const response = await fetch(`${baseUrl}/api/status`);
             if (response.ok) {
                 set({ serverStatus: 'online' });
             } else {
@@ -215,7 +245,7 @@ export const useStore = create<AppState>((set) => ({
 
     activeTool: 'hand',
     setActiveTool: (activeTool) => set({ activeTool }),
-    
+
     videoElement: null,
     setVideoElement: (videoElement) => set({ videoElement }),
 
@@ -280,19 +310,19 @@ export const useStore = create<AppState>((set) => ({
     setActiveSplatUrl: (activeSplatUrl) => set({ activeSplatUrl }),
     activeProxyUrl: null,
     setActiveProxyUrl: (activeProxyUrl) => set({ activeProxyUrl }),
-    
+
     objBounds: [1, 1, 1],
-    setObjBounds: (objBounds) => set({ objBounds }),    
+    setObjBounds: (objBounds) => set({ objBounds }),
 
     setPlaying: (isPlaying) => set({ isPlaying }),
     setCurrentFrame: (currentFrame) => set({ currentFrame }),
     setDataparserTransform: (dataparsedTransform) => set({ dataparsedTransform }),
-    setCameraData: (data: any[], fov: number) => set({ 
-        cameraData: data, 
+    setCameraData: (data: any[], fov: number) => set({
+        cameraData: data,
         cameraFov: fov,
-        totalFrames: data.length, 
+        totalFrames: data.length,
         currentFrame: 0,
-        cameraEnabled: true 
+        cameraEnabled: true
     }),
 
     toasts: [],
@@ -383,24 +413,24 @@ export const useStore = create<AppState>((set) => ({
 
         try {
             set({ cameraEnabled: true, showGrid: false, activeTool: 'hand' });
-            
+
             // --- УЛУЧШЕНИЕ ОСВЕЩЕНИЯ И ЦВЕТА ---
             gl.autoClear = false;
             gl.toneMapping = THREE.ACESFilmicToneMapping;
             gl.toneMappingExposure = 1.1; // Делаем чуть светлее и контрастнее
             gl.outputColorSpace = THREE.SRGBColorSpace;
-            
+
             const modelsGroup = scene.getObjectByName('custom-model-group');
             const shadowCatcher = scene.getObjectByName('shadow-catcher');
             const splatViewer = useStore.getState().splatViewer;
-            
+
             let currentBatch: { blob: Blob, index: number }[] = [];
 
             for (let i = 0; i < totalFrames; i++) {
                 useStore.getState().setCurrentFrame(i);
-                
+
                 // 1. Sync Video
-                await new Promise<void>(resolve => { 
+                await new Promise<void>(resolve => {
                     let fired = false;
                     const onSeeked = () => {
                         if (!fired) {
@@ -411,7 +441,7 @@ export const useStore = create<AppState>((set) => ({
                     };
                     videoElement.addEventListener('seeked', onSeeked);
                     videoElement.currentTime = (totalFrames > 1 ? i / (totalFrames - 1) : 0) * videoElement.duration;
-                    setTimeout(onSeeked, 200); 
+                    setTimeout(onSeeked, 200);
                 });
 
                 // 2. Sync Camera
@@ -439,7 +469,7 @@ export const useStore = create<AppState>((set) => ({
                 // 3. Trigger Splat Worker
                 if (splatViewer) splatViewer.visible = true;
                 gl.render(scene, camera);
-                await new Promise(r => setTimeout(r, 50)); 
+                await new Promise(r => setTimeout(r, 50));
 
                 scene.background = null;
                 gl.setClearColor(0x000000, 0);
@@ -462,7 +492,7 @@ export const useStore = create<AppState>((set) => ({
                 // PASS 2: THE MASK (WITH DEPTH SHIELD)
                 // ==========================================
                 if (splatViewer) splatViewer.visible = true;
-                if (shadowCatcher) shadowCatcher.visible = false; 
+                if (shadowCatcher) shadowCatcher.visible = false;
                 if (modelsGroup) {
                     modelsGroup.visible = true;
                     modelsGroup.traverse((c: any) => { if (c.material) c.material.colorWrite = false; });
@@ -476,13 +506,13 @@ export const useStore = create<AppState>((set) => ({
                 // PASS 3: 2D COMPOSITE (PRO TRANSPARENT)
                 // ==========================================
                 finalCtx.clearRect(0, 0, width, height);
-                
+
                 finalCtx.globalCompositeOperation = 'source-over';
                 finalCtx.drawImage(tetoCanvas, 0, 0, width, height);
-                
+
                 finalCtx.globalCompositeOperation = 'destination-out';
                 finalCtx.drawImage(maskCanvas, 0, 0, width, height);
-                
+
                 // ВАЖНО: Мы больше НЕ рисуем видео фон здесь! 
                 // Мы отправляем прозрачный кадр, чтобы FFmpeg сам наложил его в идеальном качестве.
 
@@ -498,7 +528,7 @@ export const useStore = create<AppState>((set) => ({
                         for (const item of currentBatch) {
                             formData.append('frames', item.blob, `frame_${String(item.index).padStart(5, '0')}.webp`);
                         }
-                        await fetch(`/api/projects/${activeProjectId}/export/batch`, { method: 'POST', body: formData });
+                        await fetch(`${state.backendUrl}/api/projects/${activeProjectId}/export/batch`, { method: 'POST', body: formData });
                         currentBatch = []; // Чистим RAM
                     }
                 }
@@ -510,16 +540,16 @@ export const useStore = create<AppState>((set) => ({
             }
 
             state.updateToast(toastId, { message: 'Encoding studio-quality video with FFmpeg...', progress: 100 });
-            
-            const res = await fetch(`/api/projects/${activeProjectId}/export/finalize?fps=${fps || 24}`, { method: 'POST' });
-            
+
+            const res = await fetch(`${state.backendUrl}/api/projects/${activeProjectId}/export/finalize?fps=${fps || 24}`, { method: 'POST' });
+
             if (res.ok) {
                 const data = await res.json();
                 state.updateToast(toastId, { type: 'success', title: 'Export Complete', message: 'Video downloaded successfully.' });
-                
-                const a = document.createElement('a'); 
-                a.href = data.url; 
-                a.download = data.filename || `impala_render_${activeProjectId}.mp4`; 
+
+                const a = document.createElement('a');
+                a.href = data.url;
+                a.download = data.filename || `impala_render_${activeProjectId}.mp4`;
                 a.click();
             } else {
                 throw new Error('Finalize failed on backend');
@@ -535,15 +565,15 @@ export const useStore = create<AppState>((set) => ({
             gl.toneMappingExposure = oldToneMappingExposure;
             gl.outputColorSpace = oldOutputColorSpace;
             scene.background = oldBg;
-            
+
             const modelsGroup = scene.getObjectByName('custom-model-group');
             if (modelsGroup) modelsGroup.traverse((c: any) => { if (c.material) c.material.colorWrite = true; });
-            
+
             camera.matrixAutoUpdate = true;
             set({ ...preExportState, isExporting: false });
         }
     },
-    
+
     saveCurrentProject: async () => {
         const state = useStore.getState();
         const { activeProjectId, addToast, updateToast } = state;
@@ -577,7 +607,7 @@ export const useStore = create<AppState>((set) => ({
 
         try {
             const res = await fetch(
-                `/api/projects/${activeProjectId}/save`,
+                `${state.backendUrl}/api/projects/${activeProjectId}/save`,
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -613,11 +643,11 @@ export const useStore = create<AppState>((set) => ({
         });
 
         const primitiveProps = [
-            'shadowOpacity', 'shadowBlur', 'shadowColor', 
-            'matRoughness', 'matMetallic', 
+            'shadowOpacity', 'shadowBlur', 'shadowColor',
+            'matRoughness', 'matMetallic',
             'envIntensity', 'envRotation', 'envTint'
         ] as const;
-        
+
         primitiveProps.forEach(key => {
             if (projectData[key] != null) {
                 patch[key] = projectData[key] as any;
@@ -630,10 +660,10 @@ export const useStore = create<AppState>((set) => ({
 
         const savedModelUrl = projectData.customModelUrl ?? null;
         if (savedModelUrl && !savedModelUrl.startsWith('blob:')) {
-            patch.customModelUrl  = savedModelUrl;
+            patch.customModelUrl = savedModelUrl;
             patch.customModelName = projectData.customModelName ?? null;
         } else {
-            patch.customModelUrl  = null;
+            patch.customModelUrl = null;
             patch.customModelName = null;
         }
 
@@ -647,10 +677,10 @@ export const useStore = create<AppState>((set) => ({
         }
     },
 
-    clearHistory: () => set({ 
-        undoStack: [], 
-        redoStack: [], 
-        lastCommittedState: getSnapshot(useStore.getState()) 
+    clearHistory: () => set({
+        undoStack: [],
+        redoStack: [],
+        lastCommittedState: getSnapshot(useStore.getState())
     }),
 
     lastCommittedState: null,
@@ -660,7 +690,7 @@ export const useStore = create<AppState>((set) => ({
     pushToHistory: () => {
         const state = useStore.getState();
         const currentSnapshot = getSnapshot(state);
-        
+
         // If we don't have a starting point, initialize it and don't push yet
         if (!state.lastCommittedState) {
             set({ lastCommittedState: currentSnapshot });
@@ -712,7 +742,50 @@ export const useStore = create<AppState>((set) => ({
             undoStack: [...state.undoStack, currentSnapshot].slice(-50)
         });
     },
-}));
+
+    isSettingsOpen: false,
+    setIsSettingsOpen: (isSettingsOpen) => set({ isSettingsOpen }),
+    settingsTab: 'General',
+    setSettingsTab: (settingsTab) => set({ settingsTab }),
+
+    colorScheme: 'System',
+    setColorScheme: (colorScheme) => set({ colorScheme }),
+    primaryColor: '#FF763B',
+    setPrimaryColor: (primaryColor) => set({ primaryColor }),
+    framerateLimit: '60 FPS',
+    setFramerateLimit: (framerateLimit) => set({ framerateLimit }),
+    uiScale: 'Normal',
+    setUiScale: (uiScale) => set({ uiScale }),
+    autosave: true,
+    setAutosave: (autosave) => set({ autosave }),
+    maxIterations: 15000,
+    setMaxIterations: (maxIterations) => set({ maxIterations }),
+    autoCrop: false,
+    setAutoCrop: (autoCrop) => set({ autoCrop }),
+    backendUrl: 'http://localhost:8000',
+    setBackendUrl: (backendUrl) => set({ backendUrl }),
+    language: 'English',
+    setLanguage: (language) => set({ language }),
+    cameraPreset: 'Blender',
+    setCameraPreset: (cameraPreset) => set({ cameraPreset }),
+}),
+{
+    name: 'impala-settings',
+    partialize: (state) => ({
+        colorScheme: state.colorScheme,
+        primaryColor: state.primaryColor,
+        framerateLimit: state.framerateLimit,
+        uiScale: state.uiScale,
+        autosave: state.autosave,
+        maxIterations: state.maxIterations,
+        autoCrop: state.autoCrop,
+        backendUrl: state.backendUrl,
+        language: state.language,
+        cameraPreset: state.cameraPreset,
+    }),
+}
+)
+);
 
 // --- Pure Helper functions for History ---
 
@@ -750,4 +823,4 @@ function isSameSnapshot(a: any, b: any) {
         }
     }
     return true;
-}
+}
