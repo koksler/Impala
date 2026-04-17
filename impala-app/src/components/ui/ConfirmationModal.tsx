@@ -39,14 +39,14 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none">
             {/* Backdrop */}
             <div 
-                className={`absolute inset-0 bg-black/20 transition-opacity duration-300 pointer-events-auto ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+                className={`absolute inset-0 bg-black/60 transition-opacity duration-300 pointer-events-auto ${isVisible ? 'opacity-100' : 'opacity-0'}`}
                 onClick={onCancel}
             />
 
             {/* Modal Body (Based on Toast) */}
             <div 
                 className={`
-                    relative w-[360px] bg-white rounded-[16px] shadow-2xl border border-item-border/10 overflow-hidden pointer-events-auto
+                    relative w-[360px] bg-bg rounded-[15px] shadow-2xl border border-item-border/10 overflow-hidden pointer-events-auto
                     transition-all duration-300 ease-out transform
                     ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}
                 `}

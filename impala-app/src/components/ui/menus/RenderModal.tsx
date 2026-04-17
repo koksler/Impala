@@ -74,8 +74,7 @@ export const RenderModal: React.FC = () => {
 
     return (
         <div 
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 cursor-pointer"
-            style={{ backgroundColor: 'color-mix(in oklab, var(--color-black) 60%, transparent)' }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 cursor-pointer bg-black/60"
             onClick={() => setIsRenderModalOpen(false)}
         >
             <div 

@@ -98,8 +98,8 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 pointer-events-auto">
-            <div className="w-[480px] bg-bg border border-text-main rounded-[16px] p-[24px] shadow-2xl flex flex-col gap-[20px]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 pointer-events-auto">
+            <div className="w-[480px] bg-bg border border-item-border/10 rounded-[15px] p-[24px] shadow-2xl flex flex-col gap-[20px]">
                 <h2 className="text-[24px] font-bold text-text-accent m-0">Create New Project</h2>
 
                 {status === 'idle' ? (

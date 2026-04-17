@@ -30,15 +30,15 @@ export const Toast: React.FC<{ toast: ToastInterface }> = ({ toast }) => {
     return (
         <div 
             className={`
-                relative w-[360px] bg-white rounded-[16px] shadow-xl overflow-hidden pointer-events-auto
+                relative w-[360px] bg-bg rounded-[15px] shadow-xl overflow-hidden pointer-events-auto
                 transition-all duration-300 ease-out transform
                 ${isVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'}
             `}
         >
             <div className="p-4 flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                    <h4 className="text-[16px] font-bold text-black truncate">{toast.title}</h4>
-                    <p className="text-[14px] text-gray-500 mt-0.5 line-clamp-2 leading-tight">
+                    <h4 className="text-[16px] font-bold text-text-main truncate">{toast.title}</h4>
+                    <p className="text-[14px] text-text-main/60 mt-0.5 line-clamp-2 leading-tight">
                         {toast.message}
                     </p>
                 </div>
