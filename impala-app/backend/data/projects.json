@@ -2,7 +2,7 @@
     {
         "id": "cb308b2a-60cd-465e-8ab8-fcd1aa114607",
         "title": "New 3D Scene",
-        "lastOpened": "2026-04-14",
+        "lastOpened": "2026-04-17",
         "img": "/projects_assets/default_thumb.webp",
         "splat_url": "http://localhost:8000/exports/cb308b2a-60cd-465e-8ab8-fcd1aa114607/splat.ply",
         "cameras_url": "http://localhost:8000/api/projects/cb308b2a-60cd-465e-8ab8-fcd1aa114607/cameras",
@@ -10,7 +10,7 @@
         "dataparser_transforms_url": "http://localhost:8000/api/projects/cb308b2a-60cd-465e-8ab8-fcd1aa114607/dataparser-transforms",
         "objPos": [
             -0.8444956941291341,
-            0.8211541309765975,
+            0.6492176730853596,
             -0.3769540118319624
         ],
         "objRot": [
@@ -19,9 +19,9 @@
             1.2291628685684208
         ],
         "objScale": [
-            0.05,
-            0.05,
-            0.05
+            1.0,
+            1.0,
+            1.0
         ],
         "scenePos": [
             0.0,
@@ -46,59 +46,8 @@
         "envIntensity": 1.0,
         "envRotation": 0.0,
         "envTint": "#ffffff",
-        "savedSplatUrl": "http://localhost:8000/exports/cb308b2a-60cd-465e-8ab8-fcd1aa114607/splat.ply",
+        "savedSplatUrl": "/exports/cb308b2a-60cd-465e-8ab8-fcd1aa114607/splat_cropped_06093f42.ply",
         "customModelUrl": "http://localhost:8000/projects_assets/cb308b2a-60cd-465e-8ab8-fcd1aa114607/model.glb",
         "customModelName": "model.glb"
-    },
-    {
-        "id": "4bb64e17-f17b-40a8-b2fa-6b5d71cedb8c",
-        "title": "New 3D Scene",
-        "lastOpened": "2026-04-11",
-        "img": "/projects_assets/default_thumb.webp",
-        "splat_url": "http://localhost:8000/exports/4bb64e17-f17b-40a8-b2fa-6b5d71cedb8c/splat.ply",
-        "cameras_url": "http://localhost:8000/api/projects/4bb64e17-f17b-40a8-b2fa-6b5d71cedb8c/cameras",
-        "video_url": "http://localhost:8000/uploads/4bb64e17-f17b-40a8-b2fa-6b5d71cedb8c.mp4",
-        "dataparser_transforms_url": "http://localhost:8000/api/projects/4bb64e17-f17b-40a8-b2fa-6b5d71cedb8c/dataparser-transforms",
-        "objPos": [
-            -0.469575462965628,
-            0.6580355048015895,
-            -1.4646993400244737
-        ],
-        "objRot": [
-            0.0,
-            0.0,
-            0.0
-        ],
-        "objScale": [
-            0.1,
-            0.1,
-            0.1
-        ],
-        "scenePos": [
-            0.0,
-            0.0,
-            0.0
-        ],
-        "sceneRot": [
-            0.0,
-            0.0,
-            0.0
-        ],
-        "sceneScale": [
-            1.0,
-            1.0,
-            1.0
-        ],
-        "shadowOpacity": 0.4,
-        "shadowBlur": 0.5,
-        "shadowColor": "#313133",
-        "matRoughness": 0.0,
-        "matMetallic": 0.0,
-        "envIntensity": 1.0,
-        "envRotation": 0.0,
-        "envTint": "#ffffff",
-        "customModelUrl": null,
-        "customModelName": null,
-        "savedSplatUrl": "http://localhost:8000/exports/4bb64e17-f17b-40a8-b2fa-6b5d71cedb8c/splat_cropped_731b58ce.ply"
     }
 ]
