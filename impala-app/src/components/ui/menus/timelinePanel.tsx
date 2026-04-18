@@ -25,9 +25,9 @@ export const TimelinePanel: React.FC = () => {
 
     const renderToggle = (isActive: boolean, Icon: any, onClick: () => void, tooltip: string) => (
         <Tooltip content={tooltip} position="top">
-            <Button 
-                variant="toggle" 
-                className={isActive ? "bg-bg-item border-item-border" : "border-transparent"} 
+            <Button
+                variant="toggle"
+                className={isActive ? "bg-bg-item border-item-border" : "border-transparent"}
                 onClick={onClick}
             >
                 <Icon className={`w-6 h-6 ${isActive ? 'text-text-main' : 'text-item-border'}`} />
@@ -36,14 +36,14 @@ export const TimelinePanel: React.FC = () => {
     );
 
     return (
-        <Panel className="w-full min-w-[442px] p-[16px] flex flex-col gap-[12px] pointer-events-auto">
-            <div className="flex items-center justify-center gap-[8px]">
+        <Panel className="w-full min-w-[430px] p-[15px] flex flex-col gap-[12px] pointer-events-auto">
+            <div className="flex items-center justify-center gap-[5px]">
 
                 {/* Camera track: follow nerfstudio path + show video overlay together */}
                 {renderToggle(cameraEnabled, CameraIcon, () => {
                     useStore.setState(s => ({
                         cameraEnabled: !s.cameraEnabled,
-                        showVideo: !s.cameraEnabled, 
+                        showVideo: !s.cameraEnabled,
                     }));
                 }, "Toggle Camera Track")}
 
@@ -53,28 +53,21 @@ export const TimelinePanel: React.FC = () => {
                 {renderToggle(showGrid, NetIcon, () => toggleVisibility('showGrid'), "Toggle Grid")}
                 {renderToggle(showSplat, GausssplatIcon, () => toggleVisibility('showSplat'), "Toggle Gaussian Splat")}
                 {renderToggle(showCameraPath, PathIcon, () => toggleVisibility('showCameraPath'), "Toggle Camera Path")}
-                
-                <div className="w-[1px] h-[24px] bg-item-border mx-[4px] opacity-50"></div>
-        
+
+                <div className="w-[1px] h-[24px] bg-item-border opacity-50 mx-[10px]"></div>
+
                 <Tooltip content="Import Assets" position="top">
-                    <Button variant="toggle" className="border-transparent" onClick={triggerModelImport}>
-                        <ImportIcon className="w-6 h-6 text-item-border" />
+                    <Button variant="icon" onClick={triggerModelImport}>
+                        <ImportIcon className="w-6 h-6 text-main" />
                     </Button>
                 </Tooltip>
             </div>
 
 
-            <div className="w-full h-[1px] bg-bg-border" />
-
-            {/* Time Info */}
-            <div className="text-center font-sans text-[12px] text-text-main font-medium lowercase">
-                frame: {currentFrame} / {totalFrames > 0 ? totalFrames - 1 : 0}
-            </div>
-
-            {/* Playback Controls */}
-            <div className="flex items-center gap-[16px]">
+            {/* Playback Controls & Frame Info row */}
+            <div className="flex items-center gap-[10px] w-full mt-[5px]">
                 <Tooltip content={isPlaying ? "Pause" : "Play"} position="top">
-                    <Button variant="icon" onClick={() => setPlaying(!isPlaying)}>
+                    <Button variant="misc" onClick={() => setPlaying(!isPlaying)}>
                         {isPlaying ? <PauseIcon className="w-6 h-6" /> : <PlayIcon className="w-6 h-6" />}
                     </Button>
                 </Tooltip>
@@ -93,6 +86,11 @@ export const TimelinePanel: React.FC = () => {
                         onChange={handleSliderChange}
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     />
+                </div>
+
+                {/* Time Info moved to the right */}
+                <div className="font-sans text-[12px] text-text-main font-medium lowercase whitespace-nowrap min-w-[80px] text-right">
+                    frame: {currentFrame} / {totalFrames > 0 ? totalFrames - 1 : 0}
                 </div>
             </div>
         </Panel>

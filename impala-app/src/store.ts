@@ -137,9 +137,11 @@ interface AppState {
     envIntensity: number;
     envRotation: number;
     envTint: string;
+    lightElevation: number;
     setEnvIntensity: (val: number) => void;
     setEnvRotation: (val: number) => void;
     setEnvTint: (val: string) => void;
+    setLightElevation: (val: number) => void;
 
     // Baked env
     bakedEnvTexture: THREE.Texture | null;
@@ -249,6 +251,7 @@ function getSnapshot(state: AppState) {
         envIntensity: state.envIntensity,
         envRotation: state.envRotation,
         envTint: state.envTint,
+        lightElevation: state.lightElevation,
     };
 }
 
@@ -415,10 +418,12 @@ const storeCreator: StateCreator<AppState, [['zustand/persist', unknown]], []> =
     envIntensity: 1,
     envRotation: 0,
     envTint: '#ffffff',
+    lightElevation: 45,
 
     setEnvIntensity: (envIntensity) => set({ envIntensity }),
     setEnvRotation: (envRotation) => set({ envRotation }),
     setEnvTint: (envTint) => set({ envTint }),
+    setLightElevation: (lightElevation) => set({ lightElevation }),
 
     // ── Baked env ────────────────────────────────────────────────────────────
 
@@ -747,6 +752,7 @@ const storeCreator: StateCreator<AppState, [['zustand/persist', unknown]], []> =
             envIntensity: state.envIntensity,
             envRotation: state.envRotation,
             envTint: state.envTint,
+            lightElevation: state.lightElevation,
             savedSplatUrl: state.activeSplatUrl,
             customModelUrl: state.customModelUrl?.startsWith('blob:') ? null : state.customModelUrl,
             customModelName: state.customModelUrl?.startsWith('blob:') ? null : state.customModelName,
@@ -787,7 +793,7 @@ const storeCreator: StateCreator<AppState, [['zustand/persist', unknown]], []> =
         const primitiveProps = [
             'shadowOpacity', 'shadowBlur', 'shadowColor',
             'matRoughness', 'matMetallic',
-            'envIntensity', 'envRotation', 'envTint',
+            'envIntensity', 'envRotation', 'envTint', 'lightElevation',
         ] as const;
         primitiveProps.forEach((key) => {
             if (projectData[key] != null) patch[key] = projectData[key] as any;

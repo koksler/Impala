@@ -17,7 +17,7 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
     activeTool, objPos, objRot, objScale, setObjPos, setObjRot, setObjScale,
     transformTarget, scenePos, sceneRot, sceneScale, setScenePos, setSceneRot, setSceneScale,
     shadowOpacity, shadowBlur, shadowColor,
-    envIntensity, envRotation, envTint, snapToGrid,
+    envIntensity, envRotation, envTint, lightElevation, snapToGrid,
     cropBox, setCropBox, isCropping, customModelUrl,
     bakedEnvTexture, isExporting,
     // Add export pipeline dependencies
@@ -27,11 +27,25 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
   
   const [cube, setCube] = useState<THREE.Object3D | null>(null);
   const [sceneGroupWrapper, setSceneGroupWrapper] = useState<THREE.Group | null>(null);
-  const [localModelLowestY, setLocalModelLowestY] = useState<number>(0);
   const [cropCube, setCropCube] = useState<THREE.Mesh | null>(null);
   const lightTarget = useMemo(() => new THREE.Object3D(), []);
   const videoElement = useStore(state => state.videoElement);
   const setThreeContext = useStore(state => state.setThreeContext);  
+
+  // Spherical coordinate light position: azimuth (envRotation) + elevation (lightElevation)
+  const lightPos = useMemo(() => {
+    const theta = envRotation * (Math.PI / 180); // azimuth around Y
+    const phi   = lightElevation * (Math.PI / 180); // elevation from horizon
+    return [
+      Math.sin(theta) * Math.cos(phi) * 10,
+      Math.max(0.5, Math.sin(phi) * 10), // never go below scene floor
+      Math.cos(theta) * Math.cos(phi) * 10,
+    ] as [number, number, number];
+  }, [envRotation, lightElevation]);
+
+  // Dynamic shadow frustum half-extent — covers the model regardless of scale
+  const shadowHalf = Math.max(12, Math.max(objBounds[0], objBounds[2]) * 2);
+  const shadowFar  = Math.max(30, objBounds[1] * 4);
 
   const videoEnvTexture = useMemo(() => {
     if (!videoElement) return null;
@@ -56,25 +70,27 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
       >
       <primitive object={lightTarget} position={objPos} />
       
-      {/* Tie ambient light to envIntensity so it scales naturally, rather than hardcoding 0.5 */}
-      <ambientLight intensity={envIntensity * 0.4} />
+      {/* Hemispherelight gives realistic sky/ground fill — breaks up flat lighting */}
+      <hemisphereLight skyColor={envTint !== '#ffffff' && envTint !== '#FFFFFF' ? envTint : '#b0ceff'} groundColor="#404040" intensity={envIntensity * 0.35} />
+      {/* Reduced ambient — hemisphere handles soft fill */}
+      <ambientLight intensity={envIntensity * 0.15} />
       
       <directionalLight 
-        position={[Math.sin(envRotation * (Math.PI / 180)) * 5, 5, Math.cos(envRotation * (Math.PI / 180)) * 5]} 
+        position={lightPos} 
         target={lightTarget}
         intensity={envIntensity} 
         color={envTint !== '#ffffff' && envTint !== '#FFFFFF' ? envTint : undefined} 
         castShadow 
         shadow-mapSize={[4096, 4096]} 
-        shadow-camera-left={-10}
-        shadow-camera-right={10}
-        shadow-camera-top={10}
-        shadow-camera-bottom={-10}
-        shadow-camera-near={0.5}
-        shadow-camera-far={20}
-        shadow-bias={-0.0001}
+        shadow-camera-left={-shadowHalf}
+        shadow-camera-right={shadowHalf}
+        shadow-camera-top={shadowHalf}
+        shadow-camera-bottom={-shadowHalf}
+        shadow-camera-near={0.1}
+        shadow-camera-far={shadowFar}
+        shadow-bias={-0.0005}
         shadow-normalBias={0.02}
-        shadow-radius={shadowBlur * 4}
+        shadow-radius={shadowBlur * 6}
       />
 
       <Suspense fallback={null}>
@@ -161,15 +177,18 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
           {showModels && customModelUrl && (
             <group name="custom-model-group" ref={(node) => setCube(node)} position={objPos} rotation={objRot} scale={objScale}>
               <Suspense fallback={null}>
-                <CustomModel url={customModelUrl} onLowestPoint={setLocalModelLowestY} />
+                <CustomModel url={customModelUrl} />
               </Suspense>
             </group>
           )}
 
-          <group position={objPos} rotation={objRot}>
+          {/* Shadow-catcher plane — decoupled from objRot so it always faces world-up.
+              renderOrder=9999 ensures it paints over the Gaussian splat renderer.
+              depthTest=false + depthWrite=false + polygonOffset prevent Z-fighting with the splat depth buffer. */}
+          <group position={objPos}>
             <mesh 
                 name="shadow-catcher"
-                renderOrder={0} 
+                renderOrder={9999}
                 rotation={[-Math.PI / 2, 0, 0]} 
                 position={[0, -objBounds[1] / 2 + 0.001, 0]} 
                 receiveShadow
@@ -179,8 +198,11 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
                     transparent 
                     opacity={shadowOpacity} 
                     color={shadowColor} 
-                    depthTest={true} 
-                    depthWrite={false} 
+                    depthTest={false}
+                    depthWrite={false}
+                    polygonOffset
+                    polygonOffsetFactor={-1}
+                    polygonOffsetUnits={-1}
                 />
             </mesh>
           </group>

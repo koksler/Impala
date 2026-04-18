@@ -101,7 +101,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onSuc
             onClick={(e) => e.target === e.currentTarget && onClose()}
         >
             <div 
-                className="w-[520px] bg-bg border border-item-border/10 rounded-[15px] p-[24px] shadow-2xl flex flex-col gap-[20px]"
+                className="w-[520px] bg-bg border border-bg-border rounded-[15px] p-[24px] flex flex-col gap-[20px]"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex justify-between items-center">

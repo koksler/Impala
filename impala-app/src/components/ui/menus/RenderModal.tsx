@@ -38,7 +38,7 @@ export const RenderModal: React.FC = () => {
     useEffect(() => {
         const mainCanvas = document.querySelector('.main-canvas-wrapper') as HTMLElement;
         const slot = document.getElementById('export-preview-slot');
-        
+
         let originalParent: HTMLElement | null = null;
         let nextSibling: Node | null = null;
 
@@ -46,7 +46,7 @@ export const RenderModal: React.FC = () => {
             originalParent = mainCanvas.parentElement;
             nextSibling = mainCanvas.nextSibling;
             slot.appendChild(mainCanvas);
-            
+
             // Ensure it fills the slot
             mainCanvas.style.position = 'absolute';
             mainCanvas.style.inset = '0';
@@ -60,7 +60,7 @@ export const RenderModal: React.FC = () => {
                 mainCanvas.style.inset = '';
                 mainCanvas.style.width = '';
                 mainCanvas.style.height = '';
-                
+
                 if (nextSibling) {
                     originalParent.insertBefore(mainCanvas, nextSibling);
                 } else {
@@ -73,21 +73,21 @@ export const RenderModal: React.FC = () => {
     if (!isRenderModalOpen) return null;
 
     return (
-        <div 
+        <div
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 cursor-pointer bg-black/60"
             onClick={() => setIsRenderModalOpen(false)}
         >
-            <div 
+            <div
                 className="flex gap-4 h-[924px] max-w-full max-h-[95vh] cursor-default"
                 onClick={(e) => e.stopPropagation()}
             >
-                
+
                 {/* LEFT PANEL: Settings */}
-                <div className="w-[513px] bg-bg rounded-[15px] px-[20px] py-[10px] flex flex-col overflow-y-auto scrollbar-hide">
+                <div className="w-[513px] bg-bg border border-bg-border rounded-[15px] px-[20px] py-[10px] flex flex-col overflow-y-auto scrollbar-hide">
                     <h2 className="text-[16px] text-item-border font-bold mb-6 mt-2">Export options</h2>
-                    
+
                     <h3 className="text-[16px] text-text-main font-bold mb-3">Output control</h3>
-                    
+
                     <div className="flex flex-col gap-3">
                         {/* Resolution */}
                         <div className="bg-bg-item/50 rounded-[16px] px-5 py-3 flex justify-between items-center">
@@ -96,10 +96,10 @@ export const RenderModal: React.FC = () => {
                                 <span className="text-text-main/60 text-[12px]">Scale of original input.</span>
                             </div>
                             <div className="flex justify-end">
-                                <SegmentedControl 
-                                    options={['720p', '1080p', 'Lossless']} 
-                                    value={exportResolution} 
-                                    onChange={setExportResolution} 
+                                <SegmentedControl
+                                    options={['720p', '1080p', 'Lossless']}
+                                    value={exportResolution}
+                                    onChange={setExportResolution}
                                 />
                             </div>
                         </div>
@@ -111,10 +111,10 @@ export const RenderModal: React.FC = () => {
                                 <span className="text-text-main/60 text-[12px]">Type of file you get when we're done.</span>
                             </div>
                             <div className="flex justify-end">
-                                <SegmentedControl 
-                                    options={['.mp4', '.webm', '.wav']} 
-                                    value={exportFormat} 
-                                    onChange={setExportFormat} 
+                                <SegmentedControl
+                                    options={['.mp4', '.webm', '.wav']}
+                                    value={exportFormat}
+                                    onChange={setExportFormat}
                                 />
                             </div>
                         </div>
@@ -126,17 +126,17 @@ export const RenderModal: React.FC = () => {
                                 <span className="text-text-main/60 text-[12px]">Location where it would be autosaved.</span>
                             </div>
                             <div className="flex justify-end">
-                                <TextInputRow 
-                                    label="" 
-                                    value={exportDirectory} 
-                                    onChange={setExportDirectory} 
+                                <TextInputRow
+                                    label=""
+                                    value={exportDirectory}
+                                    onChange={setExportDirectory}
                                 />
                             </div>
                         </div>
                     </div>
 
                     <h3 className="text-[16px] text-text-main font-bold mt-6 mb-3">Render Passes</h3>
-                    
+
                     <div className="flex flex-col gap-3">
                         {/* Include Shadows */}
                         <div className="bg-bg-item/50 rounded-[16px] px-5 py-3 flex justify-between items-center">
@@ -167,7 +167,7 @@ export const RenderModal: React.FC = () => {
                                 Begin Export
                             </Button>
                         ) : (
-                            <Button className="w-full py-3 bg-bg-item text-text-main" onClick={() => useStore.getState().setIsExporting(false)}>
+                            <Button variant="accent" className="w-full py-3 bg-bg-item text-text-main" onClick={() => useStore.getState().setIsExporting(false)}>
                                 Cancel Export
                             </Button>
                         )}
@@ -175,16 +175,16 @@ export const RenderModal: React.FC = () => {
                 </div>
 
                 {/* RIGHT PANEL: Preview */}
-                <div className="w-[1375px] bg-bg rounded-[15px] p-[20px] flex flex-col">
+                <div className="w-[1375px] bg-bg border border-bg-border rounded-[15px] p-[20px] flex flex-col">
                     <h2 className="text-[16px] text-item-border font-bold mb-4">Export preview</h2>
-                    
+
                     <div id="export-preview-slot" className="flex-1 bg-black rounded-[12px] overflow-hidden relative">
                         {/* Canvas will be teleported here */}
                     </div>
 
-                    <ProgressBar 
-                        progress={totalFrames > 0 ? (currentFrame / totalFrames) * 100 : 0} 
-                        className="mt-4" 
+                    <ProgressBar
+                        progress={totalFrames > 0 ? (currentFrame / totalFrames) * 100 : 0}
+                        className="mt-4"
                     />
 
                     <div className="text-[12px] text-text-main mt-4 flex flex-col items-center gap-1">

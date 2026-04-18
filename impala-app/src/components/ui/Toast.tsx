@@ -30,7 +30,7 @@ export const Toast: React.FC<{ toast: ToastInterface }> = ({ toast }) => {
     return (
         <div 
             className={`
-                relative w-[360px] bg-bg rounded-[15px] shadow-xl overflow-hidden pointer-events-auto
+                relative w-[360px] bg-bg rounded-[15px] border border-bg-border overflow-hidden pointer-events-auto
                 transition-all duration-300 ease-out transform
                 ${isVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'}
             `}
@@ -48,7 +48,7 @@ export const Toast: React.FC<{ toast: ToastInterface }> = ({ toast }) => {
                         variant='icon'
                         onClick={handleRemove}
                     >
-                        <TrashIcon className="w-5 h-5 text-gray-600" />
+                        <TrashIcon className="w-5 h-5" />
                     </Button>
                 )}
             </div>

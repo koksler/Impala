@@ -16,9 +16,9 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
     const [progress, setProgress] = useState(0);
     const [file, setFile] = useState<File | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    
+
     // НОВЫЙ СТЕЙТ ДЛЯ DRAG & DROP
-    const[isDragging, setIsDragging] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
 
     useEffect(() => {
         if (!isOpen) {
@@ -27,7 +27,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
             setFile(null);
             setIsDragging(false);
         }
-    },[isOpen]);
+    }, [isOpen]);
 
     // === ОБРАБОТЧИКИ DRAG & DROP ===
     const handleDragOver = (e: React.DragEvent) => {
@@ -57,7 +57,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
         }
 
         setStatus('uploading');
-        
+
         const formData = new FormData();
         formData.append("file", file);
         formData.append("title", projectName);
@@ -68,10 +68,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
                 body: formData,
             });
             const data = await uploadRes.json();
-            
+
             if (data.status === 'success') {
                 setStatus('processing');
-                
+
                 const interval = setInterval(async () => {
                     const statusRes = await fetch(`${backendUrl}/api/projects/${data.project_id}/status`);
                     const statusData = await statusRes.json();
@@ -80,7 +80,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
 
                     if (statusData.status === 'done') {
                         clearInterval(interval);
-                        onSuccess(statusData.project); 
+                        onSuccess(statusData.project);
                     } else if (statusData.status === 'error') {
                         clearInterval(interval);
                         addToast("Processing Failed", "The server encountered an error while baking splats.", "error");
@@ -99,15 +99,15 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 pointer-events-auto">
-            <div className="w-[480px] bg-bg border border-item-border/10 rounded-[15px] p-[24px] shadow-2xl flex flex-col gap-[20px]">
+            <div className="w-[480px] bg-bg border border-bg-border rounded-[15px] p-[24px] flex flex-col gap-[20px]">
                 <h2 className="text-[16px] font-bold text-text-accent m-0">Create New Project</h2>
 
                 {status === 'idle' ? (
                     <>
                         <div className="flex flex-col gap-[8px]">
                             <label className="text-[14px] text-text-main font-medium">Project Name</label>
-                            <input 
-                                type="text" 
+                            <input
+                                type="text"
                                 value={projectName}
                                 onChange={(e) => setProjectName(e.target.value)}
                                 className="w-full bg-bg-item border border-item-border rounded-lg px-[16px] py-[10px] text-text-main outline-none focus:border-accent"
@@ -117,7 +117,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
                         {/* === ОБНОВЛЕННАЯ ЗОНА ВЫБОРА ФАЙЛА === */}
                         <div className="flex flex-col gap-[8px]">
                             <label className="text-[14px] text-text-main font-medium">Media Source</label>
-                            <div 
+                            <div
                                 onDragOver={handleDragOver}
                                 onDragLeave={handleDragLeave}
                                 onDrop={handleDrop}
@@ -127,12 +127,12 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
                                     ${isDragging ? 'border-accent bg-accent/10' : 'border-item-border bg-bg-item hover:bg-bg-border'}
                                 `}
                             >
-                                <input 
-                                    type="file" 
-                                    ref={fileInputRef} 
-                                    className="hidden" 
-                                    accept="video/*,image/*" 
-                                    onChange={(e) => setFile(e.target.files?.[0] || null)} 
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    className="hidden"
+                                    accept="video/*,image/*"
+                                    onChange={(e) => setFile(e.target.files?.[0] || null)}
                                 />
                                 {file ? (
                                     <div className="text-center">
@@ -152,7 +152,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
 
                         <div className="flex justify-end gap-[12px] mt-[10px]">
                             <Button variant="menu-misc" onClick={onClose}>Cancel</Button>
-                            <Button variant="accent" onClick={handleStart} className="bg-accent text-white rounded-full">
+                            <Button variant="accent" onClick={handleStart}>
                                 Upload & Bake
                             </Button>
                         </div>

@@ -31,7 +31,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
       {children}
       
       {isVisible && (
-        <div className={`absolute z-50 flex items-center gap-2 px-2 py-1 bg-neutral-800 text-white text-[12px] font-sans rounded-md shadow-lg pointer-events-none whitespace-nowrap animate-in fade-in zoom-in duration-200 ${positionClasses[position]}`}>
+        <div className={`absolute z-50 flex items-center gap-2 px-2 py-1 bg-neutral-800 text-white text-[12px] font-sans rounded-md pointer-events-none whitespace-nowrap animate-in fade-in zoom-in duration-200 ${positionClasses[position]}`}>
           <span>{content}</span>
           {hotkey && (
             <span className="text-neutral-400 bg-neutral-700 px-1.5 py-0.5 rounded text-[10px] font-mono leading-none">

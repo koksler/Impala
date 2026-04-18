@@ -22,7 +22,7 @@ export const EditorUI = () => {
       </div>
 
       {/* Bottom Controls */}
-      <div className="absolute inset-0 pointer-events-none z-40 flex flex-col justify-end items-center mb-5 gap-2">
+      <div className="absolute inset-0 pointer-events-none z-40 flex flex-col justify-end items-center mb-5 gap-[5px]">
         <div className="pointer-events-auto">
           <FloatingToolbar />
         </div>

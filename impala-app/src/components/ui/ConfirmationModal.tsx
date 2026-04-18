@@ -46,7 +46,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             {/* Modal Body (Based on Toast) */}
             <div 
                 className={`
-                    relative w-[360px] bg-bg rounded-[15px] shadow-2xl border border-item-border/10 overflow-hidden pointer-events-auto
+                    relative w-[360px] bg-bg rounded-[15px] border border-bg-border overflow-hidden pointer-events-auto
                     transition-all duration-300 ease-out transform
                     ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}
                 `}

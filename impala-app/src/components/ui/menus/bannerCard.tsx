@@ -9,7 +9,7 @@ interface BannerCardProps {
 
 export const BannerCard: React.FC<BannerCardProps> = ({ title, subtitle, imageSrc, buttons }) => {
     return (
-        <div className="flex flex-1 w-full border border-text-main rounded-[15px] bg-bg overflow-hidden">            
+        <div className="flex flex-1 w-full border border-bg-border rounded-[15px] bg-bg overflow-hidden">            
             <div className="flex-1 flex flex-col justify-center px-[60px]">
                 <h2 className="text-[clamp(1.75rem,2.5vw,3rem)] text-text-accent font-bold leading-[1.1] tracking-tight m-0">
                     {title}

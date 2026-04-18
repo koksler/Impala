@@ -24,7 +24,7 @@ export const Button: React.FC<ButtonProps> = ({
         icon: 'w-10 h-10 bg-bg-item border border-item-border text-text-main rounded-2xl hover:brightness-95 shrink-0',
         toggle: 'w-10 h-10 bg-transparent border border-item-border text-item-border rounded-2xl hover:bg-bg-item shrink-0',
         misc: 'w-5 h-5 text-text-main hover:text-text-main bg-transparent shrink-0',
-        accent: 'px-10 py-2.5 h-10 bg-accent border border-accent-border text-bg rounded-2xl font-bold shadow-sm hover:brightness-105 shrink-0',
+        accent: 'px-10 py-2.5 h-10 bg-accent border border-accent-border text-bg rounded-2xl font-bold hover:brightness-105 shrink-0',
         'menu-misc': 'px-10 py-2.5 h-10 whitespace-nowrap bg-bg-item border border-item-border text-item-border rounded-2xl hover:brightness-95' 
     };
 

@@ -41,10 +41,10 @@ export const EditorView = ({ videoUrl, splatUrl, proxyUrl }: EditorViewProps) =>
   }, [videoDimensions]);
 
   return (
-    <div className="relative flex-1 w-full bg-neutral-900 overflow-hidden flex items-center justify-center p-4" ref={containerRef}>
+    <div className="relative flex-1 w-full bg-black overflow-hidden flex items-center justify-center p-4" ref={containerRef}>
       {/* Strictly enforce the calculated pixel sizing on this inner wrapper */}
       <div 
-        className="relative shadow-2xl bg-black flex items-center justify-center"
+        className="relative bg-black flex items-center justify-center"
         style={{ 
           width: exactSize.width,
           height: exactSize.height

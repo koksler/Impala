@@ -33,7 +33,7 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
 
     const { addToast, backendUrl } = useStore();
 
-     useEffect(() => {
+    useEffect(() => {
         fetch(`${backendUrl}/api/projects`)
             .then(res => res.json())
             .then((data: Project[]) => {
@@ -63,7 +63,7 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
 
     const handleDelete = async () => {
         if (!projectToDelete) return;
-        
+
         try {
             const res = await fetch(`${backendUrl}/api/projects/${projectToDelete.id}`, { method: 'DELETE' });
             if (res.ok) {
@@ -82,7 +82,10 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
 
 
     return (
-        <div className="w-full h-full flex justify-center items-stretch p-[20px] gap-[20px] bg-bg pb-[40px] overflow-hidden">
+        <div className="relative w-full h-full flex justify-center items-stretch p-[20px] gap-[20px] bg-bg pb-[40px] overflow-hidden">
+            {/* Background Darkening Layer */}
+            <div className="absolute inset-0 bg-black/5 pointer-events-none z-0" />
+
 
             <UploadModal
                 isOpen={isModalOpen}
@@ -90,7 +93,7 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
                 onSuccess={handleProjectSuccess}
             />
 
-            <ImportModal 
+            <ImportModal
                 isOpen={isImportModalOpen}
                 onClose={() => setIsImportModalOpen(false)}
                 onSuccess={handleProjectSuccess}
@@ -99,7 +102,7 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
             <ConfirmationModal
                 isOpen={!!projectToDelete || !!projectToOpen}
                 title={projectToDelete ? "Delete Project" : "Open Project"}
-                message={projectToDelete 
+                message={projectToDelete
                     ? `Are you sure you want to permanently delete "${projectToDelete?.title}"? This cannot be undone.`
                     : `Do you want to open "${projectToOpen?.title}" and continue editing?`
                 }
@@ -120,7 +123,7 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
             />
 
 
-            <div className="flex flex-col gap-[20px] flex-1 max-w-[1208px]">
+            <div className="relative z-10 flex flex-col gap-[20px] flex-1 max-w-[1208px]">
                 <BannerCard
                     title={
                         <>Generate a <span className="text-accent">new scene</span><br />from image or video</>
@@ -159,7 +162,7 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
                 />
             </div>
 
-            <div className="flex-[0.35] h-full border border-text-main rounded-[15px] px-[20px] py-[30px] flex flex-col bg-bg">
+            <div className="relative z-10 flex-[0.35] h-full border border-bg-border rounded-[15px] px-[20px] py-[30px] flex flex-col bg-bg">
 
                 <h1 className="font-bold text-[24px] text-text-accent text-center m-0 mb-[20px]">
                     Your previous projects

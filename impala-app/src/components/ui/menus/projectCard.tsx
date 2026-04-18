@@ -14,7 +14,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ title, date, imageSrc,
     return (
         <div 
             onClick={onOpen}
-            className="flex flex-col h-[150px] border border-text-main rounded-[15px] overflow-hidden cursor-pointer bg-bg select-none transition-all hover:border-accent group"
+            className="flex flex-col h-[150px] border border-bg-border rounded-[15px] overflow-hidden cursor-pointer bg-bg select-none transition-all hover:border-accent group"
         >
             <div className="h-full w-full bg-bg-item overflow-hidden">
                 <img src={imageSrc} alt={title} className="w-full h-full object-cover pointer-events-none" />

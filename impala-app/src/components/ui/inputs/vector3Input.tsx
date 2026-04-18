@@ -21,7 +21,8 @@ const AxisBlob: React.FC<AxisBlobProps> = ({ axis, val, onChange, onFinishChange
         <div className="flex items-center justify-end w-full ml-2">
             <input
                 type="number"
-                value={val}
+                step="0.001"
+                value={Math.round(val * 1000) / 1000}
                 onChange={(e) => onChange(axis, e.target.value)}
                 onBlur={onFinishChange}
                 onKeyDown={(e) => {

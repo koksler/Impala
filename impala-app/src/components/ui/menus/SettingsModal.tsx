@@ -123,8 +123,8 @@ export const SettingsModal: React.FC = () => {
                             </div>
 
                             <div className="flex items-center gap-3">
-                                <Button 
-                                    variant="misc" 
+                                <Button
+                                    variant="misc"
                                     onClick={() => setPrimaryColor('#FF763B')}
                                     title="Revert to default"
                                     className="opacity-60 hover:opacity-100"
@@ -193,7 +193,7 @@ export const SettingsModal: React.FC = () => {
                                 <span className="font-bold text-[16px] text-text-main">Max Iterations</span>
                                 <span className="text-text-main/60 text-[12px]">Higher values produce sharper splats but take longer to bake.</span>
                             </div>
-                             <div className="w-[340px] flex justify-end">
+                            <div className="w-[340px] flex justify-end">
                                 <Slider
                                     label="Splat Iterations"
                                     value={maxIterations}
@@ -326,11 +326,11 @@ export const SettingsModal: React.FC = () => {
             onClick={() => setIsSettingsOpen(false)}
         >
             <div
-                className="bg-bg rounded-[15px] overflow-hidden flex w-[1100px] h-[700px]"
+                className="bg-bg border border-bg-border rounded-[15px] overflow-hidden flex w-[1100px] h-[700px]"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* LEFT SIDEBAR */}
-                <div className="w-[250px] bg-bg-border flex flex-col h-full border-r border-item-border/10">
+                <div className="w-[250px] bg-bg-item flex flex-col h-full border-r border-item-border/10">
                     <header className="p-6 pb-4">
                         <h1 className="text-item-border font-bold text-[16px] select-none">Settings</h1>
                     </header>
@@ -342,7 +342,7 @@ export const SettingsModal: React.FC = () => {
                                 onClick={() => setSettingsTab(tab)}
                                 className={`px-4 py-2.5 rounded-xl cursor-pointer select-none transition-colors text-[16px]
                                     ${settingsTab === tab
-                                        ? 'bg-bg-item text-text-main font-normal'
+                                        ? 'bg-black/10 text-text-main font-normal'
                                         : 'text-text-main/70 font-normal hover:bg-bg-item/50'
                                     }`}
                             >
@@ -350,16 +350,6 @@ export const SettingsModal: React.FC = () => {
                             </div>
                         ))}
                     </nav>
-
-                    <footer className="p-6 flex flex-col gap-2">
-                        <div className="flex justify-between items-end text-[12px] font-normal text-item-border/70">
-                            <span>30gb <span className="font-normal text-item-border/40">/ 100gb</span></span>
-                            <span>App size</span>
-                        </div>
-                        <div className="h-[3px] bg-item-border/20 rounded-full overflow-hidden">
-                            <div className="h-full bg-accent w-[30%]" />
-                        </div>
-                    </footer>
                 </div>
 
                 {/* RIGHT CONTENT */}

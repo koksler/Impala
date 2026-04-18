@@ -42,7 +42,7 @@ export const FloatingToolbar: React.FC = () => {
             // Find the splat world matrix
             const splatViewer = useStore.getState().splatViewer;
             const splatWorldMatrix = new THREE.Matrix4();
-            
+
             if (splatViewer) {
                 const mesh = splatViewer.splatMeshes?.[0] || splatViewer.splatMesh;
                 if (mesh) {
@@ -75,21 +75,21 @@ export const FloatingToolbar: React.FC = () => {
             if (data.status === 'success' && data.new_url) {
                 setActiveSplatUrl(data.new_url);
                 setIsCropping(false);
-                updateToast(toastId, { 
-                    type: 'success', 
-                    title: 'Crop Applied', 
+                updateToast(toastId, {
+                    type: 'success',
+                    title: 'Crop Applied',
                     message: 'Gaussian data has been updated.',
-                    progress: 100 
+                    progress: 100
                 });
-                
+
                 // Success toasts auto-remove in store, but we can also manual remove after delay if we want
             }
         } catch (err) {
             console.error('Crop failed.', err);
-            updateToast(toastId, { 
-                type: 'error', 
-                title: 'Crop Failed', 
-                message: err instanceof Error ? err.message : 'Unknown error' 
+            updateToast(toastId, {
+                type: 'error',
+                title: 'Crop Failed',
+                message: err instanceof Error ? err.message : 'Unknown error'
             });
         }
     };
@@ -135,8 +135,8 @@ export const FloatingToolbar: React.FC = () => {
     };
 
     return (
-        <div className="flex items-center gap-[12px]">
-            <div className="flex items-center gap-[6px] bg-bg p-[6px] rounded-[16px] border border-bg-border mb-3">
+        <div className="flex items-center justify-center gap-[5px]">
+            <div className="flex items-center gap-[5px] bg-bg p-[6px] rounded-[16px] border border-bg-border">
                 {renderTool('hand', HandIcon)}
                 {renderTool('translate', LocateIcon)}
                 {renderTool('rotate', RotateIcon)}
@@ -144,7 +144,7 @@ export const FloatingToolbar: React.FC = () => {
                 {renderTool('snap', MagnetSnapIcon)}
             </div>
 
-            <div className="flex items-center gap-[6px] bg-bg p-[6px] rounded-[16px] border border-bg-border mb-3">
+            <div className="flex items-center gap-[6px] bg-bg p-[6px] rounded-[16px] border border-bg-border">
                 {renderTool('lasso', LassoIcon)}
                 {renderTool('brush', BrushIcon)}
                 {renderTool('eraser', EraserIcon)}
@@ -152,7 +152,7 @@ export const FloatingToolbar: React.FC = () => {
             </div>
 
             {isCropping && (
-                <div className="flex items-center bg-bg p-[6px] rounded-[16px] border border-bg-border mb-3">
+                <div className="flex items-center bg-bg p-[6px] rounded-[16px] border border-bg-border">
                     <Button
                         onClick={handleApplyCrop}
                         variant="full"

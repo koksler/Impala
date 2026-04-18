@@ -164,14 +164,14 @@ export const ObjectSettingsPanel: React.FC<ObjectSettingsPanelProps> = ({isMinim
                         <Button 
                             variant="toggle" 
                             onClick={() => setTransformTarget('object')}
-                            className={transformTarget === 'object' ? 'bg-bg-item text-text-accent flex-1 justify-center' : 'flex-1 justify-center border-transparent'}
+                            className={`!h-[20px] !rounded-[7px] !text-[12px] flex-1 justify-center ${transformTarget === 'object' ? 'bg-bg-item text-text-accent' : 'border-transparent text-item-border'}`}
                         >
                             3D Object
                         </Button>
                         <Button 
                             variant="toggle" 
                             onClick={() => setTransformTarget('scene')}
-                            className={transformTarget === 'scene' ? 'bg-bg-item text-text-accent flex-1 justify-center' : 'flex-1 justify-center border-transparent'}
+                            className={`!h-[20px] !rounded-[7px] !text-[12px] flex-1 justify-center ${transformTarget === 'scene' ? 'bg-bg-item text-text-accent' : 'border-transparent text-item-border'}`}
                         >
                             Entire Scene
                         </Button>

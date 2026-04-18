@@ -3,10 +3,11 @@ import * as THREE from 'three';
 import { useGLTF } from '@react-three/drei';
 import { useStore } from '../../store';
 
-export const CustomModel = ({ url, onLowestPoint }: { url: string, onLowestPoint?: (y: number) => void }) => {
+export const CustomModel = ({ url }: { url: string }) => {
     const { scene } = useGLTF(url);
     const { matRoughness, matMetallic } = useStore();
 
+    // Apply material properties
     useEffect(() => {
         scene.traverse((child: any) => {
             if (child.isMesh) {
@@ -21,12 +22,11 @@ export const CustomModel = ({ url, onLowestPoint }: { url: string, onLowestPoint
         });
     }, [scene, matRoughness, matMetallic]);
 
-    // Center the model and notify parent of the floor level
+    // Compute bounding box to expose objBounds (used by shadow-catcher floor offset)
+    // and center the model so TransformControls pivot at its visual center.
     useEffect(() => {
         if (!scene) return;
 
-        // Use a temporary clone to calculate the intrinsic bounding box 
-        // without current position/rotation/scale interference
         const cloned = scene.clone();
         cloned.position.set(0, 0, 0);
         cloned.rotation.set(0, 0, 0);
@@ -40,16 +40,10 @@ export const CustomModel = ({ url, onLowestPoint }: { url: string, onLowestPoint
         const size = new THREE.Vector3();
         box.getSize(size);
         useStore.getState().setObjBounds([size.x, size.y, size.z]);
-        
-        // Offset the scene so its visual center is at [0,0,0]
-        // This ensures TransformControls (attached to the parent group) are centered on the model
-        scene.position.set(-center.x, -center.y, -center.z);
 
-        if (onLowestPoint) {
-            // Report the lowest point relative to the new center
-            onLowestPoint(box.min.y - center.y);
-        }
-    }, [scene, onLowestPoint]);
+        // Offset the scene so its visual center is at [0,0,0]
+        scene.position.set(-center.x, -center.y, -center.z);
+    }, [scene]);
 
     return (
         <primitive object={scene} castShadow receiveShadow />

@@ -27,7 +27,7 @@ export const Slider: React.FC<SliderProps> = ({
         <div className={`relative w-full py-0.5 bg-bg-item rounded-[7px] overflow-hidden flex items-center ${className}`}>
             
             <div 
-                className="absolute left-0 top-0 bottom-0 bg-black/10 pointer-events-none"
+                className="absolute left-0 top-0 bottom-0 bg-text-main/15 pointer-events-none"
                 style={{ width: `${percentage}%` }}
             />
             

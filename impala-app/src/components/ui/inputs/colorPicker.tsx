@@ -127,7 +127,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
                 </div>
                 
                 <div 
-                    className="w-[28px] h-[28px] rounded-full shrink-0 shadow-sm border border-black/5"
+                    className="w-[28px] h-[28px] rounded-full shrink-0 border border-black/5"
                     style={{ backgroundColor: color }}
                 />
             </div>
@@ -149,7 +149,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
                 >
                     {/* Draggable Thumb */}
                     <div 
-                        className="absolute left-1/2 w-[24px] h-[12px] bg-transparent border-2 border-item-border rounded-[4px] shadow-sm pointer-events-none"
+                        className="absolute left-1/2 w-[24px] h-[12px] bg-transparent border-2 border-item-border rounded-[4px] pointer-events-none"
                         style={{ 
                             top: `${(currentHue / 360) * 100}%`,
                             transform: 'translate(-50%, -50%)'
