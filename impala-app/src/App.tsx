@@ -215,8 +215,10 @@ export default function App() {
 
           // If we couldn't parse any frame filenames, fallback to the raw continuous array
           let finalFrames = frames;
-          if (maxFrameIndex > 0 && maxFrameIndex < 100000) { // Safety bound
-            finalFrames = new Array(maxFrameIndex + 1).fill(null);
+          const trueMaxIndex = Math.max(maxFrameIndex, (data.total_frames || 0) - 1);
+
+          if (trueMaxIndex > 0 && trueMaxIndex < 100000) { // Safety bound
+            finalFrames = new Array(trueMaxIndex + 1).fill(null);
 
             // Pass 1: Fill existings
             for (let i = 0; i <= maxFrameIndex; i++) {
@@ -303,9 +305,11 @@ export default function App() {
                 }
               }
 
+              if (data.fps) useStore.getState().setFps(data.fps);
               setCameraData(finalFrames, fov);
             });
           } else {
+            if (data.fps) useStore.getState().setFps(data.fps);
             setCameraData(finalFrames, fov);
           }
 

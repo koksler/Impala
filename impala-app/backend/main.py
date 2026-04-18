@@ -32,6 +32,18 @@ def get_video_framerate(video_path: str) -> str:
     except Exception:
         return "25" # safe European fallback if ffprobe fails
 
+def get_video_total_frames(video_path: str) -> int:
+    cmd = [
+        "ffprobe", "-v", "error", "-select_streams", "v:0",
+        "-show_entries", "stream=nb_frames",
+        "-of", "default=noprint_wrappers=1:nokey=1", video_path
+    ]
+    try:
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, text=True, check=True)
+        return int(result.stdout.strip())
+    except Exception:
+        return 0
+
 app = FastAPI(title="Impala Backend Core")
 
 app.add_middleware(
@@ -193,6 +205,26 @@ def get_project_cameras(project_id: str):
             if key in colmap and colmap[key] is not None:
                 intrinsics[key] = colmap[key]
     
+    # Get actual video stats for perfect sync
+    with open(PROJECTS_FILE, "r") as f:
+        projects = json.load(f)
+    project = next((p for p in projects if p["id"] == project_id), None)
+    
+    total_frames_from_video = 0
+    video_fps = 0
+    if project and project.get("video_url"):
+        video_filename = os.path.basename(project["video_url"])
+        video_path = os.path.join(UPLOAD_DIR, video_filename)
+        if os.path.exists(video_path):
+            total_frames_from_video = get_video_total_frames(video_path)
+            fps_str = get_video_framerate(video_path)
+            if "/" in fps_str:
+                num, den = fps_str.split("/")
+                video_fps = float(num) / float(den)
+            else:
+                try: video_fps = float(fps_str)
+                except: video_fps = 24.0
+
     # FALLBACK: If colmap didn't have it, check the raw camera file (Nerfstudio exports these)
     # Some files have these at the root (dict), others have them in every frame (list/dict)
     if isinstance(cameras_raw, dict):
@@ -231,7 +263,12 @@ def get_project_cameras(project_id: str):
                     break
 
     print(f"[DEBUG] Final intrinsics: {intrinsics}")
-    return {"frames": frames, **intrinsics}
+    return {
+        "frames": frames, 
+        "total_frames": total_frames_from_video,
+        "fps": video_fps,
+        **intrinsics
+    }
 
 class SaveSettings(BaseModel):
     objPos: list[float] | None = None

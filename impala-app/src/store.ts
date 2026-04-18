@@ -43,6 +43,7 @@ interface AppState {
     fps: number;
     setPlaying: (playing: boolean) => void;
     setCurrentFrame: (frame: number) => void;
+    setFps: (fps: number) => void;
 
     // Camera
     cameraData: CameraFrame[] | null;
@@ -292,7 +293,12 @@ const storeCreator: StateCreator<AppState, [['zustand/persist', unknown]], []> =
     fps: 24,
 
     setPlaying: (isPlaying) => set({ isPlaying }),
-    setCurrentFrame: (currentFrame) => set({ currentFrame }),
+    setCurrentFrame: (currentFrame) => {
+        if (get().currentFrame !== currentFrame) {
+            set({ currentFrame });
+        }
+    },
+    setFps: (fps) => set({ fps }),
 
     // ── Camera ───────────────────────────────────────────────────────────────
 

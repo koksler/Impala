@@ -13,28 +13,47 @@ export const VideoBackground: React.FC<VideoBackgroundProps> = ({ url, visible }
 
   useEffect(() => {
     if (videoRef.current) {
-        setVideoElement(videoRef.current);
+      setVideoElement(videoRef.current);
     }
-    if (!videoRef.current || totalFrames === 0) return;
-        
-    const duration = videoRef.current.duration;
-    
-    if (duration > 0) {
+    if (!videoRef.current || totalFrames === 0 || isExporting) return;
 
-        const progress = currentFrame / (totalFrames - 1);
-        const targetTime = progress * duration;
+    const video = videoRef.current;
 
-        if (!isPlaying && !isExporting && Math.abs(videoRef.current.currentTime - targetTime) > 0.03) {
-            videoRef.current.currentTime = targetTime;
+    if (isPlaying) {
+      // Sync frame to video
+      const updateFrame = () => {
+        if (!isPlaying || !video) return;
+        const progress = video.currentTime / video.duration;
+        const frame = Math.min(Math.floor(progress * totalFrames), totalFrames - 1);
+        if (frame !== useStore.getState().currentFrame) {
+          useStore.getState().setCurrentFrame(frame);
         }
-    }
+        requestAnimationFrame(updateFrame);
+      };
+      const raf = requestAnimationFrame(updateFrame);
 
-    if (isPlaying && videoRef.current.paused) {
-      videoRef.current.play().catch(() => {});
-    } else if (!isPlaying && !videoRef.current.paused) {
-      videoRef.current.pause();
+      if (video.paused) {
+        video.play().catch(() => {});
+      }
+
+      return () => cancelAnimationFrame(raf);
+    } else {
+      // Sync video to frame (when scrubbed manually)
+      if (!video.paused) {
+        video.pause();
+      }
+
+      const duration = video.duration;
+      if (duration > 0) {
+        const progress = currentFrame / (totalFrames - 1);
+        const targetTime = Math.min(progress * duration, duration - 0.01);
+
+        if (Math.abs(video.currentTime - targetTime) > 0.04) {
+          video.currentTime = targetTime;
+        }
+      }
     }
-  }, [currentFrame, isPlaying, totalFrames, isExporting, setVideoElement]);
+  }, [isPlaying, totalFrames, isExporting, setVideoElement, currentFrame]);
 
   if (!url) return null;
 
