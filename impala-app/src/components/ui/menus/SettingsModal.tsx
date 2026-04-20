@@ -6,6 +6,8 @@ import { Toggle } from '../inputs/Toggle';
 import { Slider } from '../inputs/slider';
 import { Button } from '../buttons/buttons';
 import { TextInputRow } from '../inputs/textInputRow';
+import { UnderConstruction } from '../UnderConstruction';
+
 
 import {
     TrashIcon,
@@ -174,15 +176,17 @@ export const SettingsModal: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="bg-bg-item/50 rounded-[16px] px-5 py-3 flex justify-between items-center">
-                            <div className="flex flex-col gap-1">
-                                <span className="font-bold text-[16px] text-text-main">Autosave</span>
-                                <span className="text-text-main/60 text-[12px]">If on that'll save it every 5 minutes.</span>
+                        <UnderConstruction>
+                            <div className="bg-bg-item/50 rounded-[16px] px-5 py-3 flex justify-between items-center">
+                                <div className="flex flex-col gap-1">
+                                    <span className="font-bold text-[16px] text-text-main">Autosave</span>
+                                    <span className="text-text-main/60 text-[12px]">If on that'll save it every 5 minutes.</span>
+                                </div>
+                                <div className="flex justify-end">
+                                    <Toggle checked={autosave} onChange={setAutosave} colorVariant="accent" />
+                                </div>
                             </div>
-                            <div className="flex justify-end">
-                                <Toggle checked={autosave} onChange={setAutosave} colorVariant="accent" />
-                            </div>
-                        </div>
+                        </UnderConstruction>
                     </div>
                 );
             case 'Generation':
@@ -267,52 +271,42 @@ export const SettingsModal: React.FC = () => {
                                 </Button>
                             </div>
                         </div>
-
-                        <div className="bg-bg-item/50 rounded-[16px] px-5 py-3 flex justify-between items-center">
-                            <div className="flex flex-col gap-1">
-                                <span className="font-bold text-[16px] text-text-main">Storage location</span>
-                                <span className="text-text-main/60 text-[12px]">Current main export directory.</span>
-                            </div>
-                            <div className="flex justify-end">
-                                <TextInputRow
-                                    label=""
-                                    value={exportDirectory}
-                                    onChange={setExportDirectory}
-                                />
-                            </div>
-                        </div>
                     </div>
                 );
             case 'Language and Input':
                 return (
                     <div className="flex flex-col gap-4">
-                        <div className="bg-bg-item/50 rounded-[16px] px-5 py-3 flex justify-between items-center">
-                            <div className="flex flex-col gap-1">
-                                <span className="font-bold text-[16px] text-text-main">Language</span>
-                                <span className="text-text-main/60 text-[12px]">Just select a language, nothing special.</span>
+                        <UnderConstruction>
+                            <div className="bg-bg-item/50 rounded-[16px] px-5 py-3 flex justify-between items-center">
+                                <div className="flex flex-col gap-1">
+                                    <span className="font-bold text-[16px] text-text-main">Language</span>
+                                    <span className="text-text-main/60 text-[12px]">Just select a language, nothing special.</span>
+                                </div>
+                                <div className="w-[200px] flex justify-end">
+                                    <Dropdown
+                                        options={['English', 'Russian']}
+                                        value={language}
+                                        onChange={setLanguage}
+                                    />
+                                </div>
                             </div>
-                            <div className="w-[200px] flex justify-end">
-                                <Dropdown
-                                    options={['English', 'Russian']}
-                                    value={language}
-                                    onChange={setLanguage}
-                                />
-                            </div>
-                        </div>
+                        </UnderConstruction>
 
-                        <div className="bg-bg-item/50 rounded-[16px] px-5 py-3 flex justify-between items-center">
-                            <div className="flex flex-col gap-1">
-                                <span className="font-bold text-[16px] text-text-main">Camera Controls Preset</span>
-                                <span className="text-text-main/60 text-[12px]">If you fancy different controls.</span>
+                        <UnderConstruction>
+                            <div className="bg-bg-item/50 rounded-[16px] px-5 py-3 flex justify-between items-center">
+                                <div className="flex flex-col gap-1">
+                                    <span className="font-bold text-[16px] text-text-main">Camera Controls Preset</span>
+                                    <span className="text-text-main/60 text-[12px]">If you fancy different controls.</span>
+                                </div>
+                                <div className="w-[200px] flex justify-end">
+                                    <Dropdown
+                                        options={['Impala Default', 'Blender', 'Maya']}
+                                        value={cameraPreset}
+                                        onChange={setCameraPreset}
+                                    />
+                                </div>
                             </div>
-                            <div className="w-[200px] flex justify-end">
-                                <Dropdown
-                                    options={['Impala Default', 'Blender', 'Maya']}
-                                    value={cameraPreset}
-                                    onChange={setCameraPreset}
-                                />
-                            </div>
-                        </div>
+                        </UnderConstruction>
                     </div>
                 );
             default:

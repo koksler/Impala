@@ -7,6 +7,7 @@ import { UploadModal } from './uploadModal';
 import { Tooltip } from '../Tooltip';
 import { ConfirmationModal } from '../ConfirmationModal';
 import { ImportModal } from './importModal';
+import { LinkAssetModal } from './linkAssetModal';
 import { useStore } from '../../../store';
 
 export interface Project {
@@ -28,6 +29,7 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+    const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
     const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
     const [projectToOpen, setProjectToOpen] = useState<Project | null>(null);
 
@@ -49,6 +51,7 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
     const handleProjectSuccess = (newProject: Project) => {
         setIsModalOpen(false);
         setIsImportModalOpen(false);
+        setIsLinkModalOpen(false);
         setProjects(prev => [newProject, ...prev]);
         onOpenProject(newProject);
     };
@@ -99,6 +102,12 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
                 onSuccess={handleProjectSuccess}
             />
 
+            <LinkAssetModal
+                isOpen={isLinkModalOpen}
+                onClose={() => setIsLinkModalOpen(false)}
+                onSuccess={handleProjectSuccess}
+            />
+
             <ConfirmationModal
                 isOpen={!!projectToDelete || !!projectToOpen}
                 title={projectToDelete ? "Delete Project" : "Open Project"}
@@ -138,7 +147,7 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
                                 </Button>
                             </Tooltip>
                             <Tooltip content="Provide URL or external link" position="top">
-                                <Button variant="menu-misc">
+                                <Button variant="menu-misc" onClick={() => setIsLinkModalOpen(true)}>
                                     Link an external asset
                                 </Button>
                             </Tooltip>

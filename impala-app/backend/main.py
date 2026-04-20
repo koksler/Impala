@@ -18,7 +18,14 @@ import numpy as np
 from plyfile import PlyData, PlyElement
 from pydantic import BaseModel
 import subprocess
+import urllib.request
 from routers.exporter import router as exporter_router
+from routers.blender import router as blender_router
+
+def is_safe_path(base_dir: str, target_path: str) -> bool:
+    abs_base = os.path.abspath(base_dir)
+    abs_target = os.path.abspath(target_path)
+    return os.path.commonpath([abs_base, abs_target]) == abs_base
 
 def get_video_framerate(video_path: str) -> str:
     cmd = [
@@ -30,7 +37,7 @@ def get_video_framerate(video_path: str) -> str:
         result = subprocess.run(cmd, stdout=subprocess.PIPE, text=True, check=True)
         return result.stdout.strip()
     except Exception:
-        return "25" # safe European fallback if ffprobe fails
+        return "25"
 
 def get_video_total_frames(video_path: str) -> int:
     cmd = [
@@ -55,10 +62,11 @@ app.add_middleware(
 )
 
 app.include_router(exporter_router)
+app.include_router(blender_router)
 
-UPLOAD_DIR = "uploads"
-EXPORT_DIR = "exports"
-PROJECTS_FILE = os.path.join("data", "projects.json")
+UPLOAD_DIR = os.path.abspath("uploads")
+EXPORT_DIR = os.path.abspath("exports")
+PROJECTS_FILE = os.path.abspath(os.path.join("data", "projects.json"))
 os.makedirs(EXPORT_DIR, exist_ok=True)
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs("projects_assets", exist_ok=True)
@@ -158,11 +166,9 @@ def get_project_tracking(project_id: str):
 
 @app.get("/api/projects/{project_id}/dataparser-transforms")
 def get_dataparser_transforms(project_id: str):
-    # Try the high-priority Nerfstudio output path first
     search_pattern = os.path.join("outputs", project_id, "splatfacto", "*", "dataparser_transforms.json")
     dp_paths = glob.glob(search_pattern)
     
-    # Try the project export path as a fallback (for imported projects)
     export_path = os.path.join(EXPORT_DIR, project_id, "dataparser_transforms.json")
     if os.path.exists(export_path):
         dp_paths.append(export_path)
@@ -197,6 +203,7 @@ def get_project_cameras(project_id: str):
         frames = []
 
     intrinsics = {}
+    import re
     if os.path.exists(colmap_path):
         with open(colmap_path, "r") as f:
             colmap = json.load(f)
@@ -204,6 +211,15 @@ def get_project_cameras(project_id: str):
                     "camera_angle_x", "camera_angle_y", "camera_model"):
             if key in colmap and colmap[key] is not None:
                 intrinsics[key] = colmap[key]
+    
+    # Enrich frames with their true index parsed from the filename (e.g. frame_00005.png)
+    for f in frames:
+        fp = f.get("file_path", "")
+        match = re.search(r'frame_(\d+)', fp)
+        if match:
+            f["frameIndex"] = int(match.group(1)) - 1
+        else:
+            f["frameIndex"] = frames.index(f)
     
     # Get actual video stats for perfect sync
     with open(PROJECTS_FILE, "r") as f:
@@ -225,8 +241,6 @@ def get_project_cameras(project_id: str):
                 try: video_fps = float(fps_str)
                 except: video_fps = 24.0
 
-    # FALLBACK: If colmap didn't have it, check the raw camera file (Nerfstudio exports these)
-    # Some files have these at the root (dict), others have them in every frame (list/dict)
     if isinstance(cameras_raw, dict):
         print(f"[DEBUG] cameras_raw is dict. Keys: {list(cameras_raw.keys())[:20]}")
         for key in ("fl_x", "fl_y", "cx", "cy", "w", "h",
@@ -234,7 +248,6 @@ def get_project_cameras(project_id: str):
             if key not in intrinsics and key in cameras_raw:
                 intrinsics[key] = cameras_raw[key]
 
-    # If we STILL don't have them, check the first frame (some exporters put intrinsics there)
     if ("fl_y" not in intrinsics or "h" not in intrinsics) and frames:
         first_frame = frames[0]
         if isinstance(first_frame, dict):
@@ -243,11 +256,9 @@ def get_project_cameras(project_id: str):
                 if key not in intrinsics and key in first_frame:
                     intrinsics[key] = first_frame[key]
 
-    # DEEP FALLBACK: If we're still missing FOV, check if the frames point to ANOTHER project's assets
-    # (Common when importing a project that references an existing processed_data folder)
     if ("fl_y" not in intrinsics or "h" not in intrinsics) and frames:
         import re
-        for f in frames[:5]: # Check first 5 frames for reference paths
+        for f in frames[:5]:
             fp = f.get("file_path", "")
             match = re.search(r'processed_data[\\/]([a-f0-9\-]{36})', fp)
             if match:
@@ -288,6 +299,61 @@ class SaveSettings(BaseModel):
     customModelUrl: str | None = None
     customModelName: str | None = None
     savedSplatUrl: str | None = None
+
+class LinkAssetRequest(BaseModel):
+    url: str
+    title: str
+
+def download_and_process(url: str, project_id: str, title: str):
+    """Downloads an external file and then kicks off the processing pipeline."""
+    try:
+        project_status_db[project_id] = {"status": "downloading", "progress": 5}
+        
+        # Determine extension from URL or fallback to mp4
+        ext = ".mp4"
+        if "?" in url:
+            base_url = url.split("?")[0]
+        else:
+            base_url = url
+            
+        if "." in base_url:
+            potential_ext = os.path.splitext(base_url)[1]
+            if len(potential_ext) > 1 and len(potential_ext) < 6:
+                ext = potential_ext
+
+        safe_filename = f"{project_id}{ext}"
+        file_path = os.path.join(UPLOAD_DIR, safe_filename)
+
+        print(f"[LINK] Downloading {url} to {file_path}...")
+        
+        # Simple download using urllib
+        # Using a custom User-Agent to avoid blocks from certain CDNs
+        opener = urllib.request.build_opener()
+        opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+        urllib.request.install_opener(opener)
+        urllib.request.urlretrieve(url, file_path)
+
+        print(f"[LINK] Download complete. Starting pipeline...")
+        background_pipeline(file_path, project_id, title)
+        
+    except Exception as e:
+        print(f"[LINK] Error downloading asset: {e}")
+        project_status_db[project_id] = {"status": "error", "progress": 0}
+
+@app.post("/api/link-asset")
+async def link_asset(background_tasks: BackgroundTasks, request: LinkAssetRequest):
+    if not ML_SUPPORTED:
+        raise HTTPException(
+            status_code=501, 
+            detail="This server does not support CUDA training."
+        )
+
+    project_id = str(uuid.uuid4())
+    project_status_db[project_id] = {"status": "starting", "progress": 0}
+    
+    background_tasks.add_task(download_and_process, request.url, project_id, request.title)
+    
+    return {"status": "success", "project_id": project_id}
 
 @app.post("/api/projects/{project_id}/save")
 def save_project_settings(project_id: str, settings: SaveSettings):
@@ -343,32 +409,33 @@ def delete_project(project_id: str):
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # 1. Identify upload file from video_url
+    # 1. Identify upload file securely
     video_url = project.get("video_url")
     if video_url:
         upload_filename = os.path.basename(video_url)
         upload_path = os.path.join(UPLOAD_DIR, upload_filename)
-        if os.path.exists(upload_path):
+        if is_safe_path(UPLOAD_DIR, upload_path) and os.path.exists(upload_path):
             try:
                 os.remove(upload_path)
             except Exception as e:
-                print(f"[DELETE] Could not remove upload: {e}")
+                print(f" Could not remove upload: {e}")
 
-    # 2. Remove directories
+    # 2. Remove directories securely
+    safe_project_id = os.path.basename(project_id)
     dirs_to_remove = [
-        os.path.join(EXPORT_DIR, project_id),
-        os.path.join("processed_data", project_id),
-        os.path.join("projects_assets", project_id),
-        os.path.join("outputs", project_id)
+        os.path.join(EXPORT_DIR, safe_project_id),
+        os.path.join(os.path.abspath("processed_data"), safe_project_id),
+        os.path.join(os.path.abspath("projects_assets"), safe_project_id),
+        os.path.join(os.path.abspath("outputs"), safe_project_id)
     ]
 
     for d in dirs_to_remove:
-        if os.path.exists(d):
+        if is_safe_path(os.getcwd(), d) and os.path.exists(d):
             try:
                 shutil.rmtree(d)
-                print(f"[DELETE] Removed directory: {d}")
+                print(f" Removed directory: {d}")
             except Exception as e:
-                print(f"[DELETE] Could not remove directory {d}: {e}")
+                print(f" Could not remove directory {d}: {e}")
 
     # 3. Update projects.json
     projects = [p for p in projects if p["id"] != project_id]

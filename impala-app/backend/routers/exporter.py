@@ -10,24 +10,36 @@ import subprocess
 import numpy as np
 from plyfile import PlyData, PlyElement
 from pydantic import BaseModel
+from typing import Optional, Union
 
 router = APIRouter()
 
-EXPORT_DIR = "exports"
-UPLOAD_DIR = "uploads"
-PROJECTS_FILE = os.path.join("data", "projects.json")
+EXPORT_DIR = os.path.abspath("exports")
+UPLOAD_DIR = os.path.abspath("uploads")
+PROJECTS_FILE = os.path.abspath(os.path.join("data", "projects.json"))
+
+def is_safe_path(base_dir: str, target_path: str) -> bool:
+    """Cryptographically ensure the target path resolves strictly inside the designated base directory."""
+    abs_base = os.path.abspath(base_dir)
+    abs_target = os.path.abspath(target_path)
+    return os.path.commonpath([abs_base, abs_target]) == abs_base
 
 def get_video_framerate(video_path: str) -> str:
+    # Security: Verify path is within Upload directory
+    if not is_safe_path(UPLOAD_DIR, video_path):
+        return "25" # Safe fallback on traversal attempt
+        
     cmd = [
         "ffprobe", "-v", "error", "-select_streams", "v:0",
         "-show_entries", "stream=r_frame_rate",
         "-of", "default=noprint_wrappers=1:nokey=1", video_path
     ]
     try:
-        result = subprocess.run(cmd, stdout=subprocess.PIPE, text=True, check=True)
+        # Security: Added timeout to prevent infinite blocking
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True, timeout=15)
         return result.stdout.strip()
-    except Exception:
-        return "25" # safe fallback
+    except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
+        return "25"
 
 class CropRequest(BaseModel):
     inverse_matrix: list[float]
@@ -148,11 +160,34 @@ async def export_batch(project_id: str, frames: list[UploadFile] = File(...)):
             
     return {"status": "success", "count": len(frames)}
 
+class FinalizeRequest(BaseModel):
+    fps: Union[str, int, float] = 24
+    format: str = ".mp4"
+    filename: Optional[str] = None
+
+
 @router.post("/api/projects/{project_id}/export/finalize")
-async def finalize_export(project_id: str):
+async def finalize_export(project_id: str, req: FinalizeRequest):
     """Run FFmpeg to stitch frames from the tmp_frames directory into an MP4 video."""
+    
+    # Security: Sanitize project ID to prevent directory escape via URL manipulation
+    if not project_id.isalnum() and '-' not in project_id:
+        raise HTTPException(status_code=400, detail="Invalid project ID format")
+        
     tmp_dir = os.path.join(EXPORT_DIR, project_id, "tmp_frames")
-    output_filename = f"export_{uuid.uuid4().hex[:8]}.mp4"
+    if not is_safe_path(EXPORT_DIR, tmp_dir):
+        raise HTTPException(status_code=403, detail="Path traversal restricted")
+        
+    ext = req.format.lower() if req.format else ".mp4"
+    
+    # Handle filename override
+    if req.filename:
+        # Sanitize filename (remove paths and invalid chars)
+        safe_name = "".join(c for c in req.filename if c.isalnum() or c in (' ', '.', '_', '-')).rstrip()
+        output_filename = f"{safe_name}{ext}"
+    else:
+        output_filename = f"export_{uuid.uuid4().hex[:8]}{ext}"
+        
     output_path = os.path.join(EXPORT_DIR, project_id, output_filename)
     
     with open(PROJECTS_FILE, "r") as f:
@@ -162,46 +197,72 @@ async def finalize_export(project_id: str):
     if not project or not project.get("video_url"):
         raise HTTPException(status_code=404, detail="Original video not found")
         
-    video_filename = project["video_url"].split("/")[-1]
+    # Security: Restrict filename isolation using basename to strip any injected relative paths
+    video_filename = os.path.basename(project["video_url"])
     original_video_path = os.path.join(UPLOAD_DIR, video_filename)
 
-    if not os.path.exists(original_video_path):
-        raise HTTPException(status_code=404, detail="Original video file missing")
+    if not is_safe_path(UPLOAD_DIR, original_video_path) or not os.path.exists(original_video_path):
+        raise HTTPException(status_code=404, detail="Original video file missing or path invalid")
 
-    exact_fps = get_video_framerate(original_video_path)
+    # Handle output formats
+    if ext == ".webm":
+        vcodec = ["-c:v", "libvpx-vp9", "-b:v", "10M"]
+        acodec = ["-c:a", "libopus", "-b:a", "192k"]  # WebM requires Opus/Vorbis, not AAC
+    else:
+        vcodec = ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-b:v", "20M", "-maxrate", "25M", "-bufsize", "25M", "-preset", "slow"]
+        acodec = ["-c:a", "copy"]  # mp4 can carry AAC natively
+        
     input_pattern = os.path.join(tmp_dir, "frame_%05d.webp")
     
-    cmd = [
-        "ffmpeg", "-y",
-        "-i", original_video_path,
-        "-framerate", exact_fps,
-        "-i", input_pattern,
-        "-filter_complex", "[0:v][1:v]overlay=0:0:eof_action=pass[vout]",
-        "-map", "[vout]",       # Maps the composited video to the output
-        "-map", "0:a?",         # Maps the original audio track to the output
-        "-c:v", "libx264",
-        "-pix_fmt", "yuv420p",
-        "-b:v", "20M",          # Forces a 20Mbps bitrate
-        "-maxrate", "25M",
-        "-bufsize", "25M",      
-        "-preset", "slow",      
-        "-c:a", "copy",         # Copies the audio losslessly without re-compressing
-        output_path
-    ]
+    try:
+        seq_fps = float(get_video_framerate(original_video_path))
+    except (ValueError, ZeroDivisionError):
+        seq_fps = req.fps or 24
+
+    
+    if ext == ".wav":
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", original_video_path,
+            "-vn",
+            "-c:a", "pcm_s16le",
+            output_path
+        ]
+    else:
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", original_video_path,
+            "-framerate", str(seq_fps),
+            "-i", input_pattern,
+            "-filter_complex", "[0:v][1:v]overlay=0:0:eof_action=pass[vout]",
+            "-map", "[vout]",
+            "-map", "0:a?",
+            *vcodec,
+            *acodec,
+            output_path
+        ]
     
     try:
-        subprocess.run(cmd, check=True, capture_output=True)
+        # Security: Explicit timeout of 600s (10 minutes) for heavy video rendering
+        subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=600)
         # Clean up frames only on success
         shutil.rmtree(tmp_dir, ignore_errors=True)
     except subprocess.CalledProcessError as e:
-        print("[FFMPEG ERROR]", e.stderr.decode('utf-8', errors='ignore'))
+        # Security & Debugging: Explicitly decode and log stderr from CalledProcessError
+        error_msg = e.stderr.decode('utf-8', errors='ignore') if e.stderr else str(e)
+        print(f" {error_msg}")
         raise HTTPException(status_code=500, detail="FFmpeg processing failed")
+    except subprocess.TimeoutExpired:
+        print(" Process timed out after 600 seconds.")
+        raise HTTPException(status_code=504, detail="FFmpeg process timed out")
     except Exception as e:
-        print(f"[CLEANUP ERROR] Could not remove frames dir: {e}")
+        print(f" Could not remove frames dir: {e}")
         
+    final_url = f"/exports/{project_id}/{output_filename}"
+    
     return {
         "status": "success",
-        "url": f"/exports/{project_id}/{output_filename}",
+        "url": final_url,
         "filename": output_filename
     }
 

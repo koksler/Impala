@@ -53,7 +53,7 @@ export default function App() {
       if (useStore.getState().activeProjectId) {
         saveCurrentProject();
       }
-    }, 300000); // 5 minutes
+    }, 300000);
     return () => clearInterval(id);
   }, [autosave, saveCurrentProject]);
 
@@ -61,9 +61,6 @@ export default function App() {
     const handleKeyDown = (e: KeyboardEvent) => {
       const ctrl = e.ctrlKey || e.metaKey;
 
-      // ── Global shortcuts — intercept BEFORE the input focus guard ──
-      // Without this, Ctrl+S with focus on a number input lets the browser
-      // fire its native "Save Page" dialog, causing a full-page reload.
       if (ctrl && (e.code === 'KeyS' || e.key.toLowerCase() === 's')) {
         e.preventDefault();
         e.stopPropagation();
@@ -99,7 +96,6 @@ export default function App() {
       }
 
 
-      // ── Tool shortcuts — skip when typing in an input / textarea ──
       const target = e.target as HTMLElement;
       if (
         target.tagName === 'TEXTAREA' ||
@@ -171,7 +167,7 @@ export default function App() {
           //   1. fl_y + h (COLMAP / Nerfstudio splatfacto export)
           //   2. root camera_angle_y (Nerfstudio instant-ngp, vertical rad)
           //   3. root camera_angle_x (horizontal rad → convert to vertical)
-          //   4. default 45°
+          //   4. default 45deg
           let fov = 45;
           let fovSource = 'default-45';
           
@@ -207,7 +203,7 @@ export default function App() {
             const fp = f.file_path || '';
             const match = fp.match(/frame_(\d+)/i);
             if (match) {
-              const idx = parseInt(match[1], 10) - 1; // 1-indexed filename to 0-indexed array
+              const idx = parseInt(match[1], 10) - 1;
               parsedFrames[idx] = f;
               if (idx > maxFrameIndex) maxFrameIndex = idx;
             }
@@ -284,8 +280,7 @@ export default function App() {
                   const q3 = q1.clone().slerp(q2, t);
 
                   const m3 = new THREE.Matrix4().compose(p3, q3, new THREE.Vector3(1, 1, 1));
-                  const e = m3.elements; // column-major
-                  // We need to restore to the flat row-major layout expected by CameraSync
+                  const e = m3.elements;
                   const newFlat = [
                     e[0], e[4], e[8], e[12],
                     e[1], e[5], e[9], e[13],

@@ -13,14 +13,14 @@ export const EnvironmentBaker = () => {
     const objPos = useStore(state => state.objPos);
     
     const [renderTarget, cubeCamera, previewCamera, previewRT] = useMemo(() => {
-        const rt = new THREE.WebGLCubeRenderTarget(512, {
+        const rt = new THREE.WebGLCubeRenderTarget(1024, {
             generateMipmaps: true,
             minFilter: THREE.LinearMipmapLinearFilter,
             magFilter: THREE.LinearFilter,
         });
         const cam = new THREE.CubeCamera(0.1, 1000, rt);
         
-        const pt = new THREE.WebGLRenderTarget(256, 128);
+        const pt = new THREE.WebGLRenderTarget(512, 256);
         const pCam = new THREE.PerspectiveCamera(120, 2, 0.1, 1000); // 120 degree FOV for a wide preview
         
         return [rt, cam, pCam, pt];

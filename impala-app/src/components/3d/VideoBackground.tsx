@@ -10,7 +10,6 @@ export const VideoBackground: React.FC<VideoBackgroundProps> = ({ url, visible }
   const videoRef = useRef<HTMLVideoElement>(null);
   const { currentFrame, isPlaying, totalFrames, setVideoElement, videoOpacity } = useStore();
   const isExporting = useStore(state => state.isExporting);  
-
   useEffect(() => {
     if (videoRef.current) {
       setVideoElement(videoRef.current);
@@ -20,23 +19,55 @@ export const VideoBackground: React.FC<VideoBackgroundProps> = ({ url, visible }
     const video = videoRef.current;
 
     if (isPlaying) {
-      // Sync frame to video
-      const updateFrame = () => {
+      // Sync frame to video using hardware-accurate callback
+      let callbackId: number;
+
+      const syncFrame = (_now: number, metadata: any) => {
         if (!isPlaying || !video) return;
-        const progress = video.currentTime / video.duration;
-        const frame = Math.min(Math.floor(progress * totalFrames), totalFrames - 1);
-        if (frame !== useStore.getState().currentFrame) {
-          useStore.getState().setCurrentFrame(frame);
+
+        const { totalFrames } = useStore.getState();
+        const duration = video.duration;
+        if (duration <= 0) return;
+
+        // Unified Timing: Match scrub logic by deriving FPS from total duration
+        const workingFps = (totalFrames - 1) / duration;
+        
+        // Exact hardware timestamp of the presented frame
+        const fractionalIndex = Math.min(
+          Math.max(0, metadata.mediaTime * workingFps),
+          totalFrames - 1
+        );
+
+        // Perform "transient" store update to bypass React's render loop for CameraSync
+        useStore.setState({ 
+          currentFrameFractional: fractionalIndex,
+          currentFrame: Math.floor(fractionalIndex) // Keep UI integer in sync
+        });
+
+        if ('requestVideoFrameCallback' in video) {
+          callbackId = (video as any).requestVideoFrameCallback(syncFrame);
+        } else {
+          callbackId = requestAnimationFrame(() => syncFrame(performance.now(), { mediaTime: video.currentTime }));
         }
-        requestAnimationFrame(updateFrame);
       };
-      const raf = requestAnimationFrame(updateFrame);
 
       if (video.paused) {
         video.play().catch(() => {});
       }
 
-      return () => cancelAnimationFrame(raf);
+      if ('requestVideoFrameCallback' in video) {
+        callbackId = (video as any).requestVideoFrameCallback(syncFrame);
+      } else {
+        callbackId = requestAnimationFrame(() => syncFrame(performance.now(), { mediaTime: video.currentTime }));
+      }
+
+      return () => {
+        if ('cancelVideoFrameCallback' in video) {
+          (video as any).cancelVideoFrameCallback(callbackId);
+        } else {
+          cancelAnimationFrame(callbackId);
+        }
+      };
     } else {
       // Sync video to frame (when scrubbed manually)
       if (!video.paused) {
@@ -45,6 +76,9 @@ export const VideoBackground: React.FC<VideoBackgroundProps> = ({ url, visible }
 
       const duration = video.duration;
       if (duration > 0) {
+        // Ensure manual scrub also maintains fractional parity
+        useStore.setState({ currentFrameFractional: currentFrame });
+
         const progress = currentFrame / (totalFrames - 1);
         const targetTime = Math.min(progress * duration, duration - 0.01);
 

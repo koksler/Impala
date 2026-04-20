@@ -1,19 +1,58 @@
-import { useEffect } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import * as THREE from 'three';
-import { useGLTF } from '@react-three/drei';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { useStore } from '../../store';
 
 export const CustomModel = ({ url }: { url: string }) => {
-    const { scene } = useGLTF(url);
+    const [scene, setScene] = useState<THREE.Group | null>(null);
     const { matRoughness, matMetallic } = useStore();
+    const abortControllerRef = useRef<AbortController | null>(null);
+
+    useEffect(() => {
+        if (!url) return;
+
+        // Cancel previous load if any
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+        abortControllerRef.current = new AbortController();
+
+        const loader = new GLTFLoader();
+        
+        loader.load(
+            url,
+            (gltf) => {
+                setScene(gltf.scene);
+            },
+            undefined,
+            (error) => {
+                console.error(`[CustomModel] Failed to load 3D model: ${url}`, error);
+                setScene(null);
+                useStore.getState().addToast(
+                    'Model Load Failed',
+                    `Could not load 3D object from ${url}. Check if the file exists.`,
+                    'error'
+                );
+            }
+        );
+
+        return () => {
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
+            setScene(null);
+        };
+    }, [url]);
 
     // Apply material properties
     useEffect(() => {
+        if (!scene) return;
         scene.traverse((child: any) => {
             if (child.isMesh) {
                 child.castShadow = true;
                 child.receiveShadow = true;
                 if (child.material) {
+                    child.material.shadowSide = THREE.DoubleSide;
                     child.material.roughness = matRoughness;
                     child.material.metalness = matMetallic;
                     child.material.needsUpdate = true;
@@ -22,8 +61,7 @@ export const CustomModel = ({ url }: { url: string }) => {
         });
     }, [scene, matRoughness, matMetallic]);
 
-    // Compute bounding box to expose objBounds (used by shadow-catcher floor offset)
-    // and center the model so TransformControls pivot at its visual center.
+    // Compute bounding box
     useEffect(() => {
         if (!scene) return;
 
@@ -41,11 +79,11 @@ export const CustomModel = ({ url }: { url: string }) => {
         box.getSize(size);
         useStore.getState().setObjBounds([size.x, size.y, size.z]);
 
-        // Offset the scene so its visual center is at [0,0,0]
         scene.position.set(-center.x, -center.y, -center.z);
     }, [scene]);
 
-    return (
-        <primitive object={scene} castShadow receiveShadow />
-    );
+    if (!scene) return null;
+
+    return <primitive object={scene} castShadow receiveShadow />;
 };
+
