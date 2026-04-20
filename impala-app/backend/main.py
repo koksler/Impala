@@ -64,6 +64,14 @@ app.add_middleware(
 app.include_router(exporter_router)
 app.include_router(blender_router)
 
+@app.middleware("http")
+async def add_coop_coep_headers(request, call_next):
+    response = await call_next(request)
+    # Required for SharedArrayBuffer (used by Gaussian Splatting)
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+    response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
+    return response
+
 UPLOAD_DIR = os.path.abspath("uploads")
 EXPORT_DIR = os.path.abspath("exports")
 PROJECTS_FILE = os.path.abspath(os.path.join("data", "projects.json"))
@@ -76,13 +84,6 @@ app.mount("/exports", StaticFiles(directory=EXPORT_DIR), name="exports")
 app.mount("/projects_assets", StaticFiles(directory="projects_assets"), name="projects_assets")
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
-# UI Static Files serving
-DIST_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app", "static"))
-if os.path.exists(DIST_DIR):
-    print(f"Production mode: Serving static files from {DIST_DIR}")
-    app.mount("/", StaticFiles(directory=DIST_DIR, html=True), name="static")
-else:
-    print("Development mode: Serving API only.")
 
 project_status_db = {}
 
@@ -552,3 +553,11 @@ def cleanup_projects():
                         print(f"[PURGE] Error removing {base_dir}/{d}: {e}")
     
     return {"status": "success", "deleted_files": deleted_count}
+
+# UI Static Files serving (Must be at the end to avoid shadowing API)
+DIST_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app", "static"))
+if os.path.exists(DIST_DIR):
+    print(f"Production mode: Serving static files from {DIST_DIR}")
+    app.mount("/", StaticFiles(directory=DIST_DIR, html=True), name="static")
+else:
+    print("Development mode: Serving API only.")
