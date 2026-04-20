@@ -30,7 +30,6 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
   const [cropCube, setCropCube] = useState<THREE.Mesh | null>(null);
 
   const lightTarget = useMemo(() => new THREE.Object3D(), []);
-  const videoElement = useStore(state => state.videoElement);
 
   // Selection state
   const [drawPoints, setDrawPoints] = useState<THREE.Vector2[]>([]);
@@ -118,15 +117,15 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
         dpr={[1, 2]}
         onCreated={({ scene, gl, camera }) => {
           scene.add(lightTarget);
-          setThreeContext(gl, scene, camera);
+          setThreeContext(gl, scene, camera as any);
         }}
       >
-        <PerformanceMonitor bounds={(fps) => (fps > 55 ? 'incline' : fps < 30 ? 'decline' : 'fallback')}>
+        <PerformanceMonitor onDecline={() => {}} onIncline={() => {}}>
           <AdaptiveDpr pixelated={false} />
 
           <primitive object={lightTarget} position={objPos} />
 
-          <hemisphereLight skyColor={envTint !== '#ffffff' && envTint !== '#FFFFFF' ? envTint : '#b0ceff'} groundColor="#404040" intensity={envIntensity * 0.35} />
+          <hemisphereLight color={envTint !== '#ffffff' && envTint !== '#FFFFFF' ? envTint : '#b0ceff'} groundColor="#404040" intensity={envIntensity * 0.35} />
           <ambientLight intensity={envIntensity * 0.15} />
 
           <directionalLight

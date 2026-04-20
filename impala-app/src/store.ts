@@ -749,9 +749,9 @@ const storeCreator: StateCreator<AppState, [['zustand/persist', unknown]], []> =
                     }
 
                     if (dirLight) {
-                        dirLight.intensity = Math.max(state.envIntensity, 1.0);
-                        dirLight.shadow.camera.updateProjectionMatrix();
-                        dirLight.shadow.needsUpdate = true;
+                        (dirLight as any).intensity = Math.max(state.envIntensity, 1.0);
+                        (dirLight as any).shadow.camera.updateProjectionMatrix();
+                        (dirLight as any).shadow.needsUpdate = true;
                     }
                 }
 

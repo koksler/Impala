@@ -76,10 +76,14 @@ app.mount("/exports", StaticFiles(directory=EXPORT_DIR), name="exports")
 app.mount("/projects_assets", StaticFiles(directory="projects_assets"), name="projects_assets")
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
-if not os.path.exists(PROJECTS_FILE):
-    with open(PROJECTS_FILE, "w") as f:
-        json.dump([], f)
-        
+# UI Static Files serving
+DIST_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app", "static"))
+if os.path.exists(DIST_DIR):
+    print(f"Production mode: Serving static files from {DIST_DIR}")
+    app.mount("/", StaticFiles(directory=DIST_DIR, html=True), name="static")
+else:
+    print("Development mode: Serving API only.")
+
 project_status_db = {}
 
 @app.get("/api/status")

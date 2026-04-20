@@ -25,7 +25,6 @@ export const Header: React.FC<HeaderProps> = ({
     onGoHome
 }) => {
     const saveCurrentProject = useStore(s => s.saveCurrentProject);
-    const startExportPipeline = useStore(s => s.startExportPipeline);
     const isExporting = useStore(s => s.isExporting);
     const undo = useStore(s => s.undo);
     const redo = useStore(s => s.redo);

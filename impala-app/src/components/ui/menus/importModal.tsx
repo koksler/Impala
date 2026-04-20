@@ -3,7 +3,6 @@ import { Button } from '../buttons/buttons';
 import { useStore } from '../../../store';
 import type { Project } from './homePage';
 import { 
-    MinimizeIcon, 
     CorrectIcon, 
     NotCorrectIcon 
 } from '../../../components/icons';

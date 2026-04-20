@@ -9,3 +9,4 @@
 /impala-app/backend/exports
 /impala-app/backend/projects_assets
 /impala-app/backend/routers/__pycache__
+/.prod-ready

@@ -5,7 +5,6 @@ import { TextInputRow } from '../inputs/textInputRow';
 import { Toggle } from '../inputs/Toggle';
 import { Button } from '../buttons/buttons';
 import { ProgressBar } from '../progressBar';
-import { Tooltip } from '../Tooltip';
 import { UnderConstruction } from '../UnderConstruction';
 
 
@@ -36,8 +35,6 @@ export const RenderModal: React.FC = () => {
         setExportFormat,
         exportFilename,
         setExportFilename,
-        exportDirectory,
-        setExportDirectory,
         exportIncludeShadows,
         setExportIncludeShadows,
         exportRenderOcclusion,
@@ -217,8 +214,6 @@ export const RenderModal: React.FC = () => {
     const isBlenderEngine = exportEngine !== 'realtime';
     const isBlenderRunning = isBlenderEngine && blenderJobStatus !== null &&
         !['done', 'error', 'cancelled'].includes(blenderJobStatus ?? '');
-    const engineDisabled = (eng: string) =>
-        (eng === 'eevee' || eng === 'cycles') && blenderStatus?.available === false;
 
     const formatTime = (frame: number) => {
         const totalSeconds = frame / (fps || 24);

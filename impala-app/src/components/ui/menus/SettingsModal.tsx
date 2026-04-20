@@ -43,8 +43,6 @@ export const SettingsModal: React.FC = () => {
         setLanguage,
         cameraPreset,
         setCameraPreset,
-        exportDirectory,
-        setExportDirectory,
         addToast,
         updateToast,
     } = useStore();
@@ -183,7 +181,7 @@ export const SettingsModal: React.FC = () => {
                                     <span className="text-text-main/60 text-[12px]">If on that'll save it every 5 minutes.</span>
                                 </div>
                                 <div className="flex justify-end">
-                                    <Toggle checked={autosave} onChange={setAutosave} colorVariant="accent" />
+                                    <Toggle checked={autosave} onChange={setAutosave} activeColor="accent" />
                                 </div>
                             </div>
                         </UnderConstruction>
@@ -215,7 +213,7 @@ export const SettingsModal: React.FC = () => {
                                 <span className="text-text-main/60 text-[12px]">Experimental, could affect occlusion effects.</span>
                             </div>
                             <div className="flex justify-end">
-                                <Toggle checked={autoCrop} onChange={setAutoCrop} colorVariant="black" />
+                                <Toggle checked={autoCrop} onChange={setAutoCrop} activeColor="black" />
                             </div>
                         </div>
                     </div>
