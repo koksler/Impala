@@ -42,9 +42,10 @@ export const ObjectSettingsPanel: React.FC<ObjectSettingsPanelProps> = ({ isMini
         shadowColor, setShadowColor,
         matRoughness, setMatRoughness,
         matMetallic, setMatMetallic,
-        customModelName,
-        setCustomModelUrl,
-        setCustomModelName,
+        customModels,
+        activeModelId,
+        setActiveModelId,
+        removeCustomModel,
         pushToHistory,
         activeProjectId,
         backendUrl,
@@ -153,7 +154,7 @@ export const ObjectSettingsPanel: React.FC<ObjectSettingsPanelProps> = ({ isMini
     const setScale = transformTarget === 'object' ? setObjScale : setSceneScale;
 
     return (
-        <Panel className={isMinimized ? "h-fit w-[280px]" : "h-full flex flex-col w-[280px]"}>
+        <Panel className={`pointer-events-auto ${isMinimized ? "h-fit w-[280px]" : "h-full flex flex-col w-[280px]"}`}>
             {/* Header */}
             <div className="flex justify-between items-center px-[16px]">
                 <h1 className="font-sans font-bold text-[16px] text-text-accent m-0 tracking-wide">
@@ -176,18 +177,22 @@ export const ObjectSettingsPanel: React.FC<ObjectSettingsPanelProps> = ({ isMini
 
                     {/* Objects List */}
                     <SectionHeader title="Objects in this project" onAdd={triggerModelImport} />
-                    <div className="mt-[10px]">
-                        {customModelName ? (
-                            <ObjectListItem
-                                name={customModelName.includes('.') ? customModelName.split('.').slice(0, -1).join('.') : customModelName}
-                                extension={customModelName.includes('.') ? customModelName.slice(customModelName.lastIndexOf('.')) : '.glb'}
-                                onSwap={triggerModelImport}
-                                onClose={() => {
-                                    setCustomModelUrl(null);
-                                    setCustomModelName(null);
-                                }}
-                            />
-                        ) : null}
+                    <div className="mt-[10px] flex flex-col gap-[6px]">
+                        {customModels.map(model => (
+                            <div key={model.id} className="relative cursor-pointer" onClick={() => setActiveModelId(model.id)}>
+                                {/* Active indicator */}
+                                <div className={`absolute -left-[4px] top-0 bottom-0 w-[3px] rounded-l-[6px] ${activeModelId === model.id ? 'bg-[var(--color-accent)]' : 'bg-transparent'}`} />
+                                <ObjectListItem
+                                    name={model.name.includes('.') ? model.name.split('.').slice(0, -1).join('.') : model.name}
+                                    extension={model.name.includes('.') ? model.name.slice(model.name.lastIndexOf('.')) : '.glb'}
+                                    onSwap={triggerModelImport}
+                                    onClose={(e) => {
+                                        if (e && e.stopPropagation) e.stopPropagation();
+                                        removeCustomModel(model.id);
+                                    }}
+                                />
+                            </div>
+                        ))}
                     </div>
 
                     <Divider />
@@ -265,7 +270,7 @@ export const ObjectSettingsPanel: React.FC<ObjectSettingsPanelProps> = ({ isMini
                                 </Button>
                             </Tooltip>
                         )}
-                        {transformTarget === 'object' && customModelName && (
+                        {transformTarget === 'object' && activeModelId && (
                             <Tooltip content="Permanently delete splats colliding with the object" position="top">
                                 <Button
                                     variant="full"

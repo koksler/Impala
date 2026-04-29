@@ -145,9 +145,6 @@ export const FloatingToolbar: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-[6px] bg-bg p-[6px] rounded-[16px] border border-bg-border">
-                {renderTool('lasso', LassoIcon)}
-                {renderTool('brush', BrushIcon)}
-                {renderTool('eraser', EraserIcon)}
                 {renderTool('crop', CropIcon)}
             </div>
 

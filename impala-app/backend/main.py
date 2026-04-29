@@ -534,6 +534,8 @@ class SaveSettings(BaseModel):
     envTint: str | None = None
     customModelUrl: str | None = None
     customModelName: str | None = None
+    customModels: list[dict] | None = None
+    activeModelId: str | None = None
     savedSplatUrl: str | None = None
 
 
@@ -572,20 +574,17 @@ async def upload_project_model(project_id: str, file: UploadFile = File(...)):
     project_assets_dir = _safe_join(os.path.abspath("projects_assets"), project_id)
     os.makedirs(project_assets_dir, exist_ok=True)
 
-    for old_file in os.listdir(project_assets_dir):
-        try:
-            os.remove(os.path.join(project_assets_dir, old_file))
-        except OSError as e:
-            print(f"[model upload] Could not remove old asset {old_file!r}: {e}")
-
-    file_path = _safe_join(project_assets_dir, safe_filename)
+    # We no longer delete old files to allow multiple models
+    import uuid
+    unique_filename = f"{uuid.uuid4().hex[:8]}_{safe_filename}"
+    file_path = _safe_join(project_assets_dir, unique_filename)
 
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
     return {
         "status": "success",
-        "url": f"{BASE_URL}/projects_assets/{project_id}/{safe_filename}",
+        "url": f"{BASE_URL}/projects_assets/{project_id}/{unique_filename}",
         "name": file.filename,
     }
 

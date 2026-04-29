@@ -300,6 +300,84 @@ export default function App() {
                 }
               }
 
+              // Pass 3: Moving Average Smoothing (Window = 5)
+              const smoothedFrames = [...finalFrames];
+              const windowSize = 2; // ±2 frames
+              
+              for (let i = 0; i <= maxFrameIndex; i++) {
+                if (!finalFrames[i]) continue;
+                
+                let sumP = new THREE.Vector3();
+                let sumQ = new THREE.Vector4();
+                let count = 0;
+                
+                // Get reference quaternion to ensure consistent hemisphere
+                const refRaw = finalFrames[i].transform_matrix || finalFrames[i].transform || finalFrames[i].camera_to_world || [];
+                const refFlat = Array.isArray(refRaw[0]) ? refRaw.flat() : refRaw;
+                let refQ = new THREE.Quaternion();
+                if (refFlat.length >= 12) {
+                   const refM = new THREE.Matrix4().set(
+                     refFlat[0], refFlat[1], refFlat[2], refFlat[3],
+                     refFlat[4], refFlat[5], refFlat[6], refFlat[7],
+                     refFlat[8], refFlat[9], refFlat[10], refFlat[11],
+                     0, 0, 0, 1
+                   );
+                   refQ.setFromRotationMatrix(refM);
+                }
+                
+                for (let j = Math.max(0, i - windowSize); j <= Math.min(maxFrameIndex, i + windowSize); j++) {
+                  const f = finalFrames[j];
+                  if (!f) continue;
+                  
+                  const mRaw = f.transform_matrix || f.transform || f.camera_to_world || [];
+                  const flat = Array.isArray(mRaw[0]) ? mRaw.flat() : mRaw;
+                  if (flat.length >= 12) {
+                    const m = new THREE.Matrix4().set(
+                      flat[0], flat[1], flat[2], flat[3],
+                      flat[4], flat[5], flat[6], flat[7],
+                      flat[8], flat[9], flat[10], flat[11],
+                      0, 0, 0, 1
+                    );
+                    const p = new THREE.Vector3().setFromMatrixPosition(m);
+                    const q = new THREE.Quaternion().setFromRotationMatrix(m);
+                    
+                    sumP.add(p);
+                    
+                    // Hemisphere check
+                    if (refQ.dot(q) < 0) {
+                      sumQ.x -= q.x; sumQ.y -= q.y; sumQ.z -= q.z; sumQ.w -= q.w;
+                    } else {
+                      sumQ.x += q.x; sumQ.y += q.y; sumQ.z += q.z; sumQ.w += q.w;
+                    }
+                    count++;
+                  }
+                }
+                
+                if (count > 0) {
+                  sumP.divideScalar(count);
+                  const qLength = Math.sqrt(sumQ.x*sumQ.x + sumQ.y*sumQ.y + sumQ.z*sumQ.z + sumQ.w*sumQ.w);
+                  const avgQ = new THREE.Quaternion(sumQ.x / qLength, sumQ.y / qLength, sumQ.z / qLength, sumQ.w / qLength);
+                  
+                  const m3 = new THREE.Matrix4().compose(sumP, avgQ, new THREE.Vector3(1, 1, 1));
+                  const e = m3.elements;
+                  const newFlat = [
+                    e[0], e[4], e[8], e[12],
+                    e[1], e[5], e[9], e[13],
+                    e[2], e[6], e[10], e[14]
+                  ];
+                  
+                  smoothedFrames[i] = {
+                    ...finalFrames[i],
+                    transform_matrix: [
+                      [newFlat[0], newFlat[1], newFlat[2], newFlat[3]],
+                      [newFlat[4], newFlat[5], newFlat[6], newFlat[7]],
+                      [newFlat[8], newFlat[9], newFlat[10], newFlat[11]]
+                    ]
+                  };
+                }
+              }
+              finalFrames = smoothedFrames;
+
               if (data.fps) useStore.getState().setFps(data.fps);
               setCameraData(finalFrames, fov);
             });

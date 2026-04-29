@@ -19,7 +19,7 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
     transformTarget, scenePos, sceneRot, sceneScale, setScenePos, setSceneRot, setSceneScale,
     shadowOpacity, shadowBlur, shadowColor,
     envIntensity, envRotation, envTint, lightElevation, snapToGrid,
-    cropBox, setCropBox, isCropping, customModelUrl,
+    cropBox, setCropBox, isCropping, customModels, activeModelId, setActiveModelId,
     bakedEnvTexture, isExporting,
     currentFrame, totalFrames, setPlaying, updateToast, preExportState,
     pushToHistory, objBounds, splatViewer, threeContext, setThreeContext, setCameraEnabled
@@ -178,6 +178,7 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
 
             {!isExporting && transformTarget === 'object' && showModels && !isCropping && (activeTool === 'translate' || activeTool === 'rotate' || activeTool === 'scale') && cube && (
               <TransformControls
+                key={activeModelId || 'none'}
                 object={cube}
                 mode={activeTool}
                 translationSnap={snapToGrid ? 1 : null}
@@ -231,13 +232,25 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
 
             </group>
 
-            {showModels && customModelUrl && (
-              <group name="custom-model-group" ref={(node) => setCube(node)} position={objPos} rotation={objRot} scale={objScale}>
-                <group renderOrder={10}>
-                  <Suspense fallback={null}>
-                    <CustomModel url={customModelUrl} />
-                  </Suspense>
-                </group>
+            {showModels && (
+              <group name="custom-models-container">
+                {customModels.map(model => (
+                  <group
+                    key={model.id}
+                    ref={(node) => {
+                      if (activeModelId === model.id) setCube(node);
+                    }}
+                    position={activeModelId === model.id ? objPos : model.pos}
+                    rotation={activeModelId === model.id ? objRot : model.rot}
+                    scale={activeModelId === model.id ? objScale : model.scale}
+                  >
+                    <group renderOrder={10} onPointerDown={(e) => { e.stopPropagation(); setActiveModelId(model.id); }}>
+                      <Suspense fallback={null}>
+                        <CustomModel url={model.url} />
+                      </Suspense>
+                    </group>
+                  </group>
+                ))}
               </group>
             )}
 

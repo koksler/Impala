@@ -127,6 +127,14 @@ interface AppState {
     customModelName: string | null;
     setCustomModelName: (name: string | null) => void;
 
+    // Multi-model
+    customModels: { id: string; url: string; name: string; pos: [number, number, number]; rot: [number, number, number]; scale: [number, number, number] }[];
+    activeModelId: string | null;
+    addCustomModel: (model: { id: string; url: string; name: string; pos: [number, number, number]; rot: [number, number, number]; scale: [number, number, number] }) => void;
+    removeCustomModel: (id: string) => void;
+    setActiveModelId: (id: string | null) => void;
+    updateCustomModel: (id: string, updates: Partial<{ url: string; name: string; pos: [number, number, number]; rot: [number, number, number]; scale: [number, number, number] }>) => void;
+
     // Shadow & material
     shadowOpacity: number;
     shadowBlur: number;
@@ -247,6 +255,8 @@ interface AppState {
 
 function getSnapshot(state: AppState) {
     return {
+        customModels: state.customModels.map(m => ({ ...m })),
+        activeModelId: state.activeModelId,
         objPos: [...state.objPos],
         objRot: [...state.objRot],
         objScale: [...state.objScale],
@@ -377,9 +387,24 @@ const storeCreator: StateCreator<AppState, [['zustand/persist', unknown]], []> =
     objScale: [1, 1, 1],
     objBounds: [1, 1, 1],
 
-    setObjPos: (objPos) => set({ objPos }),
-    setObjRot: (objRot) => set({ objRot }),
-    setObjScale: (objScale) => set({ objScale }),
+    setObjPos: (objPos) => set((state) => {
+        if (state.activeModelId) {
+            return { objPos, customModels: state.customModels.map(m => m.id === state.activeModelId ? { ...m, pos: objPos } : m) };
+        }
+        return { objPos };
+    }),
+    setObjRot: (objRot) => set((state) => {
+        if (state.activeModelId) {
+            return { objRot, customModels: state.customModels.map(m => m.id === state.activeModelId ? { ...m, rot: objRot } : m) };
+        }
+        return { objRot };
+    }),
+    setObjScale: (objScale) => set((state) => {
+        if (state.activeModelId) {
+            return { objScale, customModels: state.customModels.map(m => m.id === state.activeModelId ? { ...m, scale: objScale } : m) };
+        }
+        return { objScale };
+    }),
     setObjBounds: (objBounds) => set({ objBounds }),
 
     activeTool: 'hand',
@@ -448,6 +473,65 @@ const storeCreator: StateCreator<AppState, [['zustand/persist', unknown]], []> =
 
     setCustomModelUrl: (customModelUrl) => set({ customModelUrl }),
     setCustomModelName: (customModelName) => set({ customModelName }),
+
+    customModels: [],
+    activeModelId: null,
+
+    addCustomModel: (model) => set((state) => {
+        const newModels = [...state.customModels, model];
+        return {
+            customModels: newModels,
+            activeModelId: model.id,
+            objPos: model.pos,
+            objRot: model.rot,
+            objScale: model.scale,
+            customModelUrl: model.url,
+            customModelName: model.name
+        };
+    }),
+
+    removeCustomModel: (id) => set((state) => {
+        const newModels = state.customModels.filter(m => m.id !== id);
+        const newActiveId = newModels.length > 0 ? newModels[0].id : null;
+        const newActive = newModels.find(m => m.id === newActiveId);
+        return {
+            customModels: newModels,
+            activeModelId: newActiveId,
+            objPos: newActive ? newActive.pos : [0, 0.5, 0],
+            objRot: newActive ? newActive.rot : [0, 0, 0],
+            objScale: newActive ? newActive.scale : [1, 1, 1],
+            customModelUrl: newActive ? newActive.url : null,
+            customModelName: newActive ? newActive.name : null
+        };
+    }),
+
+    setActiveModelId: (id) => set((state) => {
+        const model = state.customModels.find(m => m.id === id);
+        if (model) {
+            return {
+                activeModelId: id,
+                objPos: model.pos,
+                objRot: model.rot,
+                objScale: model.scale,
+                customModelUrl: model.url,
+                customModelName: model.name
+            };
+        }
+        return { activeModelId: id };
+    }),
+
+    updateCustomModel: (id, updates) => set((state) => {
+        const newModels = state.customModels.map(m => m.id === id ? { ...m, ...updates } : m);
+        const isActive = state.activeModelId === id;
+        return {
+            customModels: newModels,
+            ...(isActive && updates.pos ? { objPos: updates.pos } : {}),
+            ...(isActive && updates.rot ? { objRot: updates.rot } : {}),
+            ...(isActive && updates.scale ? { objScale: updates.scale } : {}),
+            ...(isActive && updates.url ? { customModelUrl: updates.url } : {}),
+            ...(isActive && updates.name ? { customModelName: updates.name } : {})
+        };
+    }),
 
     // ── Shadow & material ────────────────────────────────────────────────────
 
@@ -628,7 +712,7 @@ const storeCreator: StateCreator<AppState, [['zustand/persist', unknown]], []> =
 
         const WORLD_ROTATION = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
 
-        const modelsGroup = scene.getObjectByName('custom-model-group');
+        const modelsGroup = scene.getObjectByName('custom-models-container') || scene.getObjectByName('custom-model-group');
         const shadowCatcher = scene.getObjectByName('shadow-catcher');
         const proxyGroup = scene.getObjectByName('proxy-occluder-group');
         const splatViewer = get().splatViewer;
@@ -1019,6 +1103,8 @@ const storeCreator: StateCreator<AppState, [['zustand/persist', unknown]], []> =
             savedSplatUrl: state.activeSplatUrl,
             customModelUrl: state.customModelUrl?.startsWith('blob:') ? null : state.customModelUrl,
             customModelName: state.customModelUrl?.startsWith('blob:') ? null : state.customModelName,
+            customModels: state.customModels.filter(m => !m.url.startsWith('blob:')).map(m => ({ ...m })),
+            activeModelId: state.activeModelId,
         };
 
         try {
@@ -1072,6 +1158,20 @@ const storeCreator: StateCreator<AppState, [['zustand/persist', unknown]], []> =
             patch.customModelUrl = null;
             patch.customModelName = null;
         }
+
+        let loadedCustomModels = projectData.customModels || [];
+        if (loadedCustomModels.length === 0 && savedModelUrl && !savedModelUrl.startsWith('blob:')) {
+            loadedCustomModels = [{
+                id: 'legacy-model',
+                url: savedModelUrl,
+                name: projectData.customModelName || 'Model',
+                pos: projectData.objPos || [0, 0.5, 0],
+                rot: projectData.objRot || [0, 0, 0],
+                scale: projectData.objScale || [1, 1, 1]
+            }];
+        }
+        patch.customModels = loadedCustomModels;
+        patch.activeModelId = projectData.activeModelId || (loadedCustomModels.length > 0 ? loadedCustomModels[0].id : null);
 
         if (Object.keys(patch).length > 0) {
             set(patch);

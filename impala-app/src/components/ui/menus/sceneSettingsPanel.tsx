@@ -25,7 +25,7 @@ export const SceneSettingsPanel: React.FC<SceneSettingsPanelProps> = ({ isMinimi
     const { envIntensity, setEnvIntensity, envRotation, setEnvRotation, envTint, setEnvTint, videoOpacity, setVideoOpacity, setIsBakingEnv, bakedEnvPreview, pushToHistory, lightElevation, setLightElevation } = useStore();
 
     return (
-        <Panel className={isMinimized ? "h-fit w-[280px]" : "h-full flex flex-col w-[280px] pb-[12px]"}>
+        <Panel className={`pointer-events-auto ${isMinimized ? "h-fit w-[280px]" : "h-full flex flex-col w-[280px] pb-[12px]"}`}>
             {/* Header */}
             <div className="flex justify-between items-center px-[16px] h-10">
                 <h1 className="font-sans font-bold text-[16px] text-text-accent m-0 tracking-wide">

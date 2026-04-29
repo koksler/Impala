@@ -13,10 +13,10 @@ export const EditorUI = () => {
     <div className={`absolute inset-0 pointer-events-none transition-all duration-500 ${isExporting ? 'opacity-50' : 'opacity-100'}`}>
       {/* Side Panels */}
       <div className="absolute inset-0 pointer-events-none z-40 p-4 flex justify-between items-start pt-[20px]">
-        <div className="pointer-events-auto h-full">
+        <div className="pointer-events-none h-full">
           <ObjectSettingsPanel isMinimized={minimized} onToggleMinimize={() => setMinimized(!minimized)} />
         </div>
-        <div className="pointer-events-auto h-full">
+        <div className="pointer-events-none h-full">
           <SceneSettingsPanel isMinimized={minimized} />
         </div>
       </div>

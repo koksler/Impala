@@ -10,8 +10,15 @@ export const triggerModelImport = () => {
             // 1. Immediate preview using blob URL
             const blobUrl = URL.createObjectURL(file);
             const state = useStore.getState();
-            state.setCustomModelUrl(blobUrl);
-            state.setCustomModelName(file.name);
+            const modelId = Math.random().toString(36).substring(2, 9);
+            state.addCustomModel({
+                id: modelId,
+                url: blobUrl,
+                name: file.name,
+                pos: [0, 0.5, 0],
+                rot: [0, 0, 0],
+                scale: [1, 1, 1]
+            });
 
             // 2. Background upload to backend for persistence
             const projectId = state.activeProjectId;
@@ -29,7 +36,7 @@ export const triggerModelImport = () => {
                 .then(data => {
                     if (data.status === 'success') {
                         // Switch from temporary blob to permanent server URL
-                        state.setCustomModelUrl(data.url);
+                        state.updateCustomModel(modelId, { url: data.url });
                         state.updateToast(toastId, {
                             type: 'success',
                             title: 'Model Uploaded',
