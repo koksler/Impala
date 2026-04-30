@@ -19,12 +19,15 @@ export const FloatingToolbar: React.FC = () => {
     const { activeTool, setActiveTool, snapToGrid, setSnapToGrid, isCropping, setIsCropping } = useStore();
 
     const handleApplyCrop = async () => {
-        const { cropBox, activeProjectId, setActiveSplatUrl, addToast, updateToast } = useStore.getState();
+        const { cropBox, activeProjectId, setActiveSplatUrl, addToast, updateToast, pushToHistory } = useStore.getState();
 
         if (!activeProjectId) {
             addToast("Crop Error", "No active project ID.", "error");
             return;
         }
+
+        // Snapshot BEFORE crop so Ctrl+Z restores the pre-crop splat.
+        pushToHistory();
 
         const toastId = addToast("Cropping Splats", "Filtering vertex data in the backend...", "process");
 
@@ -75,14 +78,16 @@ export const FloatingToolbar: React.FC = () => {
             if (data.status === 'success' && data.new_url) {
                 setActiveSplatUrl(data.new_url);
                 setIsCropping(false);
+
+                // Snapshot AFTER so the new URL is the committed state.
+                pushToHistory();
+
                 updateToast(toastId, {
                     type: 'success',
                     title: 'Crop Applied',
-                    message: 'Gaussian data has been updated.',
+                    message: 'Splat cropped. Use Ctrl+Z to undo.',
                     progress: 100
                 });
-
-                // Success toasts auto-remove in store, but we can also manual remove after delay if we want
             }
         } catch (err) {
             console.error('Crop failed.', err);
@@ -93,6 +98,7 @@ export const FloatingToolbar: React.FC = () => {
             });
         }
     };
+
 
     const renderTool = (name: string, Icon: any) => {
         const isActive = name === 'snap' ? snapToGrid : name === 'crop' ? isCropping : activeTool === name;

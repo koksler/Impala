@@ -52,71 +52,72 @@ export const ObjectSettingsPanel: React.FC<ObjectSettingsPanelProps> = ({ isMini
         setActiveSplatUrl,
         addToast,
         updateToast,
-        objBounds,
         splatViewer
     } = useStore();
 
     const handleClearAroundObject = async () => {
-        if (!activeProjectId) return;
+        if (!activeProjectId || !activeModelId) return;
 
-        const padding = 1.2;
+        pushToHistory();
 
-        // ── FIX: The custom model group lives at the ROOT of the Canvas scene.
-        // It is NOT inside the <group position={[0, -1.5, 0]}> in EditorCanvas —
-        // that group only wraps the crop box and editor grid. Adding that offset
-        // was causing the crop volume to be shifted 1.5 units below the actual
-        // object, so the wrong splats were being deleted.
-        //
-        // The model's world matrix is simply composed from objPos/objRot/objScale
-        // (store values that mirror the group's position/rotation/scale props).
-        const cropWorldMatrix = new THREE.Matrix4().compose(
-            new THREE.Vector3(...objPos),
-            new THREE.Quaternion().setFromEuler(new THREE.Euler(...objRot)),
-            new THREE.Vector3(
-                objScale[0] * objBounds[0] * padding,
-                objScale[1] * objBounds[1] * padding,
-                objScale[2] * objBounds[2] * padding,
-            ),
-        );
-
-        // Invert into a fresh matrix — don't mutate cropWorldMatrix so we keep
-        // it readable for debugging if needed.
-        const inverseCropMatrix = cropWorldMatrix.clone().invert();
-
-        // ── Splat world transform ─────────────────────────────────────────────
-        // The SplatMesh lives inside: sceneGroupWrapper → GaussianScene group
-        // (rotation -π/2 X) → DropInViewer → SplatMesh.
-        // matrixWorld on the mesh gives the combined world transform directly.
-        const splatWorldMatrix = new THREE.Matrix4();
-        if (splatViewer) {
-            const mesh = splatViewer.splatMeshes?.[0] ?? splatViewer.splatMesh;
-            if (mesh) {
-                mesh.updateMatrixWorld(true);
-                splatWorldMatrix.copy(mesh.matrixWorld);
-            } else {
-                // Fallback: only the GaussianScene local -π/2 X rotation
-                splatWorldMatrix.makeRotationX(-Math.PI / 2);
-            }
-        } else {
-            splatWorldMatrix.makeRotationX(-Math.PI / 2);
+        // ── Get the model's ACTUAL world-space AABB from the Three.js scene ──
+        // DO NOT use objBounds * objScale — objBounds stores LOCAL-space extents
+        // (e.g. 100 model units) and multiplying by a tiny scale like 0.05 still
+        // produces world-space radii of ~5 units, eating the whole scene.
+        const { threeContext } = useStore.getState();
+        if (!threeContext?.scene) {
+            addToast('Error', 'Scene not ready.', 'error');
+            return;
         }
 
-        // finalMatrix transforms a point from raw splat-local space into the
-        // crop-box-local space. The Python backend checks ∈ [-0.5, 0.5]³.
-        //
-        //   P_crop = Inverse(cropWorld) × splatWorld × P_splat
-        //
-        // Use a fresh matrix for the multiplication so neither source matrix
-        // is mutated (THREE.Matrix4.multiply() mutates the left operand).
-        const finalMatrix = new THREE.Matrix4()
-            .copy(inverseCropMatrix)
-            .multiply(splatWorldMatrix);
+        const modelNode = threeContext.scene.getObjectByName(`custom-model-${activeModelId}`);
+        if (!modelNode) {
+            addToast('Error', 'Model not found in scene.', 'error');
+            return;
+        }
 
-        const toastId = addToast(
-            'Clearing collisions...',
-            'Processing splat deletion around object...',
-            'process',
-        );
+        modelNode.updateMatrixWorld(true);
+        const worldBox = new THREE.Box3().setFromObject(modelNode);
+        if (worldBox.isEmpty()) {
+            addToast('Error', 'Could not compute model bounds.', 'error');
+            return;
+        }
+
+        // Extend the AABB downward by the object's own height so splats hiding
+        // under the shadow catcher plane (which sits at model floor level) are
+        // also removed. The shadow plane is very thin but sits right at min.y.
+        const objectHeight = worldBox.max.y - worldBox.min.y;
+        worldBox.min.y -= objectHeight;
+
+        // ── Build the splat world matrix ─────────────────────────────────────
+        // Force a full scene matrix update so every object's matrixWorld is
+        // current (including the sceneGroupWrapper, GaussianScene group, and
+        // any dataparsedTransform applied by the viewer internally).
+        threeContext.scene.updateMatrixWorld(true);
+
+        const splatMatrix = new THREE.Matrix4();
+        const splatMesh = splatViewer?.splatMeshes?.[0] ?? splatViewer?.splatMesh ?? null;
+        if (splatMesh) {
+            splatMatrix.copy(splatMesh.matrixWorld);
+        } else {
+            // Fallback: reconstruct from store values + the standard -π/2 X rotation
+            const { scenePos, sceneRot, sceneScale } = useStore.getState();
+            const sceneGroupMatrix = new THREE.Matrix4().compose(
+                new THREE.Vector3(...scenePos),
+                new THREE.Quaternion().setFromEuler(new THREE.Euler(...sceneRot)),
+                new THREE.Vector3(...sceneScale),
+            );
+            splatMatrix.copy(sceneGroupMatrix).multiply(new THREE.Matrix4().makeRotationX(-Math.PI / 2));
+        }
+
+        console.log('[clear-splats] AABB:', worldBox.min, '→', worldBox.max);
+        console.log('[clear-splats] splatMesh found:', !!splatMesh);
+        console.log('[clear-splats] splatMatrix translation:', splatMatrix.elements[12].toFixed(3), splatMatrix.elements[13].toFixed(3), splatMatrix.elements[14].toFixed(3));
+
+        const { activeSplatUrl } = useStore.getState();
+        const currentSplatFilename = activeSplatUrl?.split('/').pop() ?? '';
+
+        const toastId = addToast('Clearing collisions...', 'Removing splats inside the model bounds...', 'process');
 
         try {
             const res = await fetch(
@@ -124,27 +125,44 @@ export const ObjectSettingsPanel: React.FC<ObjectSettingsPanelProps> = ({ isMini
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ inverse_matrix: Array.from(finalMatrix.elements) }),
+                    body: JSON.stringify({
+                        aabb_min: [worldBox.min.x, worldBox.min.y, worldBox.min.z],
+                        aabb_max: [worldBox.max.x, worldBox.max.y, worldBox.max.z],
+                        splat_matrix: Array.from(splatMatrix.elements),
+                        current_splat_filename: currentSplatFilename,
+                    }),
                 },
             );
-
-            if (!res.ok) throw new Error('Failed to clear splats');
-
+            if (!res.ok) throw new Error('Failed');
             const data = await res.json();
             setActiveSplatUrl(data.new_url);
+            pushToHistory();
             updateToast(toastId, {
                 type: 'success',
                 title: 'Collisions Cleared',
-                message: 'Gaussian splats around the object have been removed.',
+                message: `Removed ${data.removed ?? 'some'} splats inside the object. Ctrl+Z to undo.`,
             });
-        } catch (err) {
-            updateToast(toastId, {
-                type: 'error',
-                title: 'Clear Failed',
-                message: 'Could not process reverse crop.',
-            });
+        } catch {
+            updateToast(toastId, { type: 'error', title: 'Clear Failed', message: 'Could not process crop.' });
         }
     };
+
+    const handleRestoreSplat = async () => {
+        if (!activeProjectId) return;
+        pushToHistory();
+        const toastId = addToast('Restoring...', 'Reverting to original splat data...', 'process');
+        try {
+            const res = await fetch(`${backendUrl}/api/projects/${activeProjectId}/splat/restore`, { method: 'POST' });
+            if (!res.ok) throw new Error('Failed');
+            const data = await res.json();
+            setActiveSplatUrl(data.new_url);
+            pushToHistory();
+            updateToast(toastId, { type: 'success', title: 'Splat Restored', message: 'Reverted to original splat.ply. Ctrl+Z to undo.' });
+        } catch {
+            updateToast(toastId, { type: 'error', title: 'Restore Failed', message: 'Could not restore original splat.' });
+        }
+    };
+
 
     const pos = transformTarget === 'object' ? objPos : scenePos;
     const rot = transformTarget === 'object' ? objRot : sceneRot;
@@ -185,7 +203,10 @@ export const ObjectSettingsPanel: React.FC<ObjectSettingsPanelProps> = ({ isMini
                                 <ObjectListItem
                                     name={model.name.includes('.') ? model.name.split('.').slice(0, -1).join('.') : model.name}
                                     extension={model.name.includes('.') ? model.name.slice(model.name.lastIndexOf('.')) : '.glb'}
-                                    onSwap={triggerModelImport}
+                                    onSwap={(e) => {
+                                        if (e && e.stopPropagation) e.stopPropagation();
+                                        triggerModelImport(model.id);
+                                    }}
                                     onClose={(e) => {
                                         if (e && e.stopPropagation) e.stopPropagation();
                                         removeCustomModel(model.id);
@@ -271,11 +292,8 @@ export const ObjectSettingsPanel: React.FC<ObjectSettingsPanelProps> = ({ isMini
                             </Tooltip>
                         )}
                         {transformTarget === 'object' && activeModelId && (
-                            <Tooltip content="Permanently delete splats colliding with the object" position="top">
-                                <Button
-                                    variant="full"
-                                    onClick={handleClearAroundObject}
-                                >
+                            <Tooltip content="Remove splats inside the selected object's bounds (including shadow area)" position="top">
+                                <Button variant="full" onClick={handleClearAroundObject}>
                                     Clear Splats Around Object
                                 </Button>
                             </Tooltip>
@@ -294,7 +312,7 @@ export const ObjectSettingsPanel: React.FC<ObjectSettingsPanelProps> = ({ isMini
 
                     <div className="flex flex-col gap-[10px] px-[12px]">
                         <Slider label="Opacity" value={shadowOpacity} onChange={setShadowOpacity} onPointerUp={pushToHistory} />
-                        <Slider label="Blur" value={shadowBlur} onChange={setShadowBlur} onPointerUp={pushToHistory} />
+                        <Slider label="Blur" value={shadowBlur} step={0.1} showTicks onChange={(v) => setShadowBlur(Math.round(v * 10) / 10)} onPointerUp={pushToHistory} />
                         <ColorPicker color={shadowColor} onChange={setShadowColor} />
                     </div>
 

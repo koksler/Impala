@@ -94,56 +94,83 @@ async def crop_project(project_id: str, req: CropRequest):
        "new_url": f"/exports/{project_id}/{output_filename}"
     }
 
+class CropInsideAABBRequest(BaseModel):
+    aabb_min: list[float]     # world-space AABB min [x, y, z]
+    aabb_max: list[float]     # world-space AABB max [x, y, z]
+    splat_matrix: list[float] # 16-element column-major world matrix of the splat mesh
+    current_splat_filename: str = ""  # filename of the currently displayed PLY (e.g. splat_cropped_abc.ply)
+
 @router.post("/api/projects/{project_id}/crop-inside")
-async def crop_inside_project(project_id: str, req: CropRequest):
+async def crop_inside_project(project_id: str, req: CropInsideAABBRequest):
     random_id = uuid.uuid4().hex[:8]
     output_filename = f"splat_cropped_{random_id}.ply"
     output_ply = os.path.join(EXPORT_DIR, project_id, output_filename)
-    
-    existing_crops = glob.glob(os.path.join(EXPORT_DIR, project_id, "splat_cropped_*.ply"))
-    if existing_crops:
-        input_ply = max(existing_crops, key=os.path.getmtime)
+
+    # Always operate on the currently-displayed PLY, not just the latest crop.
+    # This prevents reading from a previously-damaged file after an undo.
+    if req.current_splat_filename:
+        candidate = os.path.join(EXPORT_DIR, project_id, req.current_splat_filename)
+        input_ply = candidate if os.path.exists(candidate) else os.path.join(EXPORT_DIR, project_id, "splat.ply")
     else:
-        input_ply = os.path.join(EXPORT_DIR, project_id, "splat.ply")
-        
-    # Convert JS column-major 16-element array to 4x4 numpy matrix
-    inv_matrix = np.array(req.inverse_matrix).reshape(4, 4).T
-    
+        existing_crops = glob.glob(os.path.join(EXPORT_DIR, project_id, "splat_cropped_*.ply"))
+        input_ply = max(existing_crops, key=os.path.getmtime) if existing_crops else os.path.join(EXPORT_DIR, project_id, "splat.ply")
+
     plydata = PlyData.read(input_ply)
-    v_data = plydata['vertex'].data
-    
-    # Extract positions
-    x = v_data['x']
-    y = v_data['y']
-    z = v_data['z']
-    
-    # Create 4xN matrix for multiplication (x, y, z, 1)
-    pts = np.vstack((x, y, z, np.ones_like(x)))
-    transformed_pts = inv_matrix @ pts
-    
-    # Check bounds (-0.5 to 0.5 in local crop space)
-    tx, ty, tz = transformed_pts[0, :], transformed_pts[1, :], transformed_pts[2, :]
-    # CRITICAL DIFFERENCE: Invert the NumPy mask to keep points OUTSIDE the box.
-    mask = ~((tx >= -0.5) & (tx <= 0.5) & (ty >= -0.5) & (ty <= 0.5) & (tz >= -0.5) & (tz <= 0.5))
-    
-    # Filter and save
-    new_v_data = v_data[mask]
+    v_data  = plydata['vertex'].data
+
+    x = v_data['x'].astype(np.float64)
+    y = v_data['y'].astype(np.float64)
+    z = v_data['z'].astype(np.float64)
+
+    # Transform splat points to Three.js world space using the splat mesh's matrixWorld.
+    # req.splat_matrix is column-major (JS/WebGL convention) → transpose to row-major for numpy.
+    splat_mat = np.array(req.splat_matrix, dtype=np.float64).reshape(4, 4).T
+
+    pts       = np.vstack((x, y, z, np.ones(len(x), dtype=np.float64)))
+    world_pts = splat_mat @ pts   # 4×N world-space positions
+
+    wx = world_pts[0]
+    wy = world_pts[1]
+    wz = world_pts[2]
+
+    aabb_min = req.aabb_min   # [x, y, z]
+    aabb_max = req.aabb_max   # [x, y, z]
+
+    # Debug — printed in the backend console so coordinate mismatches are visible
+    print(f"[crop-inside] AABB  : {[round(v,3) for v in aabb_min]}  →  {[round(v,3) for v in aabb_max]}")
+    print(f"[crop-inside] Splat X: {wx.min():.3f}..{wx.max():.3f}  "
+          f"Y: {wy.min():.3f}..{wy.max():.3f}  Z: {wz.min():.3f}..{wz.max():.3f}")
+
+    inside = (
+        (wx >= aabb_min[0]) & (wx <= aabb_max[0]) &
+        (wy >= aabb_min[1]) & (wy <= aabb_max[1]) &
+        (wz >= aabb_min[2]) & (wz <= aabb_max[2])
+    )
+    removed_count = int(inside.sum())
+    print(f"[crop-inside] Removing {removed_count} / {len(x)} splats")
+
+    new_v_data  = v_data[~inside]
     new_plydata = PlyData([PlyElement.describe(new_v_data, 'vertex')], text=False)
     new_plydata.write(output_ply)
-    
-    # Clean up old crops except the current one
-    remaining_crops = glob.glob(os.path.join(EXPORT_DIR, project_id, "splat_cropped_*.ply"))
-    for old_crop in remaining_crops:
-        if os.path.basename(old_crop) != output_filename:
-            try:
-                os.remove(old_crop)
-            except OSError:
-                pass
-            
-    return {
-       "status": "success", 
-       "new_url": f"/exports/{project_id}/{output_filename}"
-    }
+
+    # Clean up old cropped files
+    for old in glob.glob(os.path.join(EXPORT_DIR, project_id, "splat_cropped_*.ply")):
+        if os.path.basename(old) != output_filename:
+            try: os.remove(old)
+            except OSError: pass
+
+    return {"status": "success", "new_url": f"/exports/{project_id}/{output_filename}", "removed": removed_count}
+
+@router.post("/api/projects/{project_id}/splat/restore")
+async def restore_splat(project_id: str):
+    """Delete all cropped PLY variants and revert to the original splat.ply."""
+    original = os.path.join(EXPORT_DIR, project_id, "splat.ply")
+    if not os.path.exists(original):
+        raise HTTPException(status_code=404, detail="Original splat.ply not found")
+    for old in glob.glob(os.path.join(EXPORT_DIR, project_id, "splat_cropped_*.ply")):
+        try: os.remove(old)
+        except OSError: pass
+    return {"status": "success", "new_url": f"/exports/{project_id}/splat.ply"}
 
 @router.post("/api/projects/{project_id}/export/batch")
 async def export_batch(project_id: str, frames: list[UploadFile] = File(...)):

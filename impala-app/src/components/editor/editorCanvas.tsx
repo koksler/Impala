@@ -155,8 +155,6 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
               {showCameraPath && !isExporting && !cameraEnabled && <CameraPath />}
             </group>
 
-            {showModels && <DynamicShadowBox cube={cube} />}
-
             {!isExporting && transformTarget === 'scene' && !isCropping && (activeTool === 'translate' || activeTool === 'rotate' || activeTool === 'scale') && sceneGroupWrapper && (
               <TransformControls
                 object={sceneGroupWrapper}
@@ -176,7 +174,7 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
 
             )}
 
-            {!isExporting && transformTarget === 'object' && showModels && !isCropping && (activeTool === 'translate' || activeTool === 'rotate' || activeTool === 'scale') && cube && (
+            {!isExporting && transformTarget === 'object' && showModels && !isCropping && (activeTool === 'translate' || activeTool === 'rotate' || activeTool === 'scale') && cube && cube.userData.modelId === activeModelId && (
               <TransformControls
                 key={activeModelId || 'none'}
                 object={cube}
@@ -187,9 +185,18 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
                 onMouseUp={pushToHistory}
                 onChange={() => {
                   if (cube) {
-                    setObjPos([cube.position.x, cube.position.y, cube.position.z]);
-                    setObjRot([cube.rotation.x, cube.rotation.y, cube.rotation.z]);
-                    setObjScale([cube.scale.x, cube.scale.y, cube.scale.z]);
+                    const id = cube.userData?.modelId;
+                    if (id) {
+                      useStore.getState().updateCustomModel(id, {
+                        pos: [cube.position.x, cube.position.y, cube.position.z],
+                        rot: [cube.rotation.x, cube.rotation.y, cube.rotation.z],
+                        scale: [cube.scale.x, cube.scale.y, cube.scale.z]
+                      });
+                    } else {
+                      setObjPos([cube.position.x, cube.position.y, cube.position.z]);
+                      setObjRot([cube.rotation.x, cube.rotation.y, cube.rotation.z]);
+                      setObjScale([cube.scale.x, cube.scale.y, cube.scale.z]);
+                    }
                   }
                 }}
               />
@@ -237,7 +244,9 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
                 {customModels.map(model => (
                   <group
                     key={model.id}
+                    name={`custom-model-${model.id}`}
                     ref={(node) => {
+                      if (node) node.userData.modelId = model.id;
                       if (activeModelId === model.id) setCube(node);
                     }}
                     position={activeModelId === model.id ? objPos : model.pos}
@@ -253,6 +262,10 @@ export const EditorCanvas = ({ splatUrl, proxyUrl }: { splatUrl?: string, proxyU
                 ))}
               </group>
             )}
+
+            {showModels && customModels.map(model => (
+              <DynamicShadowBox key={`shadow-${model.id}`} modelId={model.id} />
+            ))}
 
             <VideoLightSampler />
 

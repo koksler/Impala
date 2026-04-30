@@ -1,6 +1,8 @@
 import { useStore } from '../store';
 
-export const triggerModelImport = () => {
+export const triggerModelImport = (replaceModelId?: string | unknown) => {
+    // Button onClick handlers pass a MouseEvent as the first argument — guard against it.
+    const targetId = typeof replaceModelId === 'string' ? replaceModelId : undefined;
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.glb,.gltf';
@@ -10,15 +12,23 @@ export const triggerModelImport = () => {
             // 1. Immediate preview using blob URL
             const blobUrl = URL.createObjectURL(file);
             const state = useStore.getState();
-            const modelId = Math.random().toString(36).substring(2, 9);
-            state.addCustomModel({
-                id: modelId,
-                url: blobUrl,
-                name: file.name,
-                pos: [0, 0.5, 0],
-                rot: [0, 0, 0],
-                scale: [1, 1, 1]
-            });
+            const modelId = targetId || Math.random().toString(36).substring(2, 9);
+            
+            if (targetId) {
+                state.updateCustomModel(targetId, {
+                    url: blobUrl,
+                    name: file.name
+                });
+            } else {
+                state.addCustomModel({
+                    id: modelId,
+                    url: blobUrl,
+                    name: file.name,
+                    pos: [0, 0.5, 0],
+                    rot: [0, 0, 0],
+                    scale: [1, 1, 1]
+                });
+            }
 
             // 2. Background upload to backend for persistence
             const projectId = state.activeProjectId;

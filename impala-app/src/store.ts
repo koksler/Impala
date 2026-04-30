@@ -219,6 +219,8 @@ interface AppState {
     setFramerateLimit: (val: string) => void;
     uiScale: string;
     setUiScale: (val: string) => void;
+    shadowResolution: number;
+    setShadowResolution: (val: number) => void;
     autosave: boolean;
     setAutosave: (val: boolean) => void;
     maxIterations: number;
@@ -272,6 +274,9 @@ function getSnapshot(state: AppState) {
         envRotation: state.envRotation,
         envTint: state.envTint,
         lightElevation: state.lightElevation,
+        // Splat editing ops (crop, clear-inside) produce a new URL — include it
+        // so undo/redo can restore the correct splat version.
+        activeSplatUrl: state.activeSplatUrl,
     };
 }
 
@@ -714,6 +719,10 @@ const storeCreator: StateCreator<AppState, [['zustand/persist', unknown]], []> =
 
         const modelsGroup = scene.getObjectByName('custom-models-container') || scene.getObjectByName('custom-model-group');
         const shadowCatcher = scene.getObjectByName('shadow-catcher');
+        const shadowCatchers: THREE.Object3D[] = [];
+        scene.traverse((c) => {
+            if (c.name && c.name.startsWith('shadow-catcher')) shadowCatchers.push(c);
+        });
         const proxyGroup = scene.getObjectByName('proxy-occluder-group');
         const splatViewer = get().splatViewer;
 
@@ -819,18 +828,8 @@ const storeCreator: StateCreator<AppState, [['zustand/persist', unknown]], []> =
                 // 2.5 Imperative scene physics update
                 if (modelsGroup) {
                     modelsGroup.updateMatrixWorld(true);
-                    const box = new THREE.Box3().setFromObject(modelsGroup);
-
-                    if (shadowCatcher && shadowCatcher.parent) {
-                        // Position stabilization is normally handled in useFrame, but during export
-                        // we imperatively push it to ensure it matches the current frame perfectly.
-                        shadowCatcher.parent.position.set(
-                            (box.min.x + box.max.x) / 2,
-                            box.min.y + 0.005,
-                            (box.min.z + box.max.z) / 2,
-                        );
-                        shadowCatcher.parent.updateMatrixWorld(true);
-                    }
+                    // RTT-based shadow catchers position themselves each frame via useFrame.
+                    // No manual sync required here.
 
                     if (dirLight) {
                         (dirLight as any).intensity = Math.max(state.envIntensity, 1.0);
@@ -1259,6 +1258,7 @@ const storeCreator: StateCreator<AppState, [['zustand/persist', unknown]], []> =
     backendUrl: import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000',
     language: 'English',
     cameraPreset: 'Blender',
+    shadowResolution: 512,
 
     setIsSettingsOpen: (isSettingsOpen) => set({ isSettingsOpen }),
     setSettingsTab: (settingsTab) => set({ settingsTab }),
@@ -1266,6 +1266,7 @@ const storeCreator: StateCreator<AppState, [['zustand/persist', unknown]], []> =
     setPrimaryColor: (primaryColor) => set({ primaryColor }),
     setFramerateLimit: (framerateLimit) => set({ framerateLimit }),
     setUiScale: (uiScale) => set({ uiScale }),
+    setShadowResolution: (shadowResolution) => set({ shadowResolution }),
     setAutosave: (autosave) => set({ autosave }),
     setMaxIterations: (maxIterations) => set({ maxIterations }),
     setAutoCrop: (autoCrop) => set({ autoCrop }),

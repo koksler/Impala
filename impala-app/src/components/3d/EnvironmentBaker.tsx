@@ -32,10 +32,12 @@ export const EnvironmentBaker = () => {
 
             // Traverse and hide editor elements / models that shouldn't be baked
             scene.traverse((child) => {
-                if (child.name === 'custom-model-group' || 
+                if (child.name === 'custom-models-container' ||
+                    child.name === 'custom-model-group' || 
+                    child.name.startsWith('custom-model-') ||
                     child.name === 'editor-grid' || 
                     child.name === 'crop-cube' ||
-                    child.name === 'shadow-catcher' ||
+                    child.name.startsWith('shadow-catcher') ||
                     child.name === 'splat-bounds' ||
                     child.name === 'camera-path' ||
                     child.type === 'TransformControls' ||

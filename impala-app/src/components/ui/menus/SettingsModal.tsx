@@ -31,6 +31,8 @@ export const SettingsModal: React.FC = () => {
         setFramerateLimit,
         uiScale,
         setUiScale,
+        shadowResolution,
+        setShadowResolution,
         autosave,
         setAutosave,
         maxIterations,
@@ -170,6 +172,20 @@ export const SettingsModal: React.FC = () => {
                                     options={['Compact', 'Normal', 'Large']}
                                     value={uiScale}
                                     onChange={setUiScale}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="bg-bg-item/50 rounded-[16px] px-5 py-3 flex justify-between items-center">
+                            <div className="flex flex-col gap-1">
+                                <span className="font-bold text-[16px] text-text-main">Shadow Resolution</span>
+                                <span className="text-text-main/60 text-[12px]">Adjust shadow quality. Higher values may reduce performance.</span>
+                            </div>
+                            <div className="w-[200px] flex justify-end">
+                                <Dropdown
+                                    options={['256', '512', '1024', '2048', '4096']}
+                                    value={String(shadowResolution)}
+                                    onChange={(v) => setShadowResolution(Number(v))}
                                 />
                             </div>
                         </div>
