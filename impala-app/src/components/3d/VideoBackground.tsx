@@ -14,6 +14,18 @@ export const VideoBackground: React.FC<VideoBackgroundProps> = ({ url, visible }
     if (videoRef.current) {
       setVideoElement(videoRef.current);
     }
+    // Cleanup: detach from store and stop playback on unmount
+    return () => {
+      if (videoRef.current) {
+        videoRef.current.pause();
+        videoRef.current.src = '';
+      }
+      setVideoElement(null);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     if (!videoRef.current || totalFrames === 0 || isExporting) return;
 
     const video = videoRef.current;

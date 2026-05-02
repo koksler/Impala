@@ -16,13 +16,28 @@ export const LinkAssetModal: React.FC<LinkAssetModalProps> = ({ isOpen, onClose,
     const [status, setStatus] = useState<'idle' | 'downloading' | 'processing'>('idle');
     const [progress, setProgress] = useState(0);
 
+    const [isVisible, setIsVisible] = useState(false);
+
     useEffect(() => {
-        if (!isOpen) {
+        if (isOpen) {
+            const timer = setTimeout(() => setIsVisible(true), 10);
+            const handleEsc = (e: KeyboardEvent) => {
+                if (e.key === 'Escape' && isOpen && status === 'idle') {
+                    onClose();
+                }
+            };
+            window.addEventListener('keydown', handleEsc);
+            return () => {
+                clearTimeout(timer);
+                window.removeEventListener('keydown', handleEsc);
+            };
+        } else {
+            setIsVisible(false);
             setStatus('idle');
             setProgress(0);
             setAssetUrl('');
         }
-    }, [isOpen]);
+    }, [isOpen, status, onClose]);
 
     const handleStart = async () => {
         const { addToast, backendUrl } = useStore.getState();
@@ -81,8 +96,13 @@ export const LinkAssetModal: React.FC<LinkAssetModalProps> = ({ isOpen, onClose,
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 pointer-events-auto">
-            <div className="w-[480px] bg-bg border border-bg-border rounded-[15px] p-[24px] flex flex-col gap-[20px]">
+        <div 
+            className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 pointer-events-auto transition-opacity duration-100 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+            onClick={(e) => {
+                if (e.target === e.currentTarget && status === 'idle') onClose();
+            }}
+        >
+            <div className={`w-[480px] bg-bg border border-bg-border rounded-[15px] p-[24px] flex flex-col gap-[20px] transition-all duration-100 ease-out transform ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
                 <h2 className="text-[16px] font-bold text-text-accent m-0">Link External Asset</h2>
 
                 {status === 'idle' ? (

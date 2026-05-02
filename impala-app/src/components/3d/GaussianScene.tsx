@@ -88,8 +88,11 @@ export const GaussianScene: React.FC<GaussianSceneProps> = React.memo(({ url, vi
     setSplatViewer(viewer);
 
     return () => {
+      if (viewerRef.current) {
+        try { viewerRef.current.dispose?.(); } catch (_) {}
+        viewerRef.current = null;
+      }
       if (groupRef.current) groupRef.current.clear();
-      viewerRef.current = null;
       setSplatViewer(null);
     };
   }, [url, gl, camera]);

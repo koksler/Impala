@@ -14,23 +14,23 @@ export const InitialLoader: React.FC = () => {
                 <div className="w-[120px] h-[120px] text-text-main">
                     <ImpalaLogoIcon className="w-full h-full" />
                 </div>
-                
+
                 <div className="w-full space-y-3">
                     <div className="flex justify-between text-[14px] text-text-main font-medium">
-                        <span>Initializing 3D Engine...</span>
-                        <span>Please wait</span>
+                        <span>Loading...</span>
+                        <span>Please wait up</span>
                     </div>
-                    {/* Reusing existing ProgressBar if possible, or simple div */}
                     <div className="w-full h-[6px] bg-bg-border rounded-full overflow-hidden">
                         <div className="h-full bg-accent animate-load-slow" style={{ width: '100%' }} />
                     </div>
                     <p className="text-[12px] text-item-border text-center">
-                        Loading assets and synchronizing with server
+                        Checking on the backend and saved stuff
                     </p>
                 </div>
             </div>
 
-            <style dangerouslySetInnerHTML={{ __html: `
+            <style dangerouslySetInnerHTML={{
+                __html: `
                 @keyframes load-slow {
                     0% { transform: translateX(-100%); }
                     50% { transform: translateX(0); }

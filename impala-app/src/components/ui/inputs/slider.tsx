@@ -8,7 +8,6 @@ interface SliderProps {
     step?: number;
     onChange: (value: number) => void;
     onPointerUp?: () => void;
-    /** Show tick marks at each step interval */
     showTicks?: boolean;
     className?: string;
 }
@@ -26,12 +25,12 @@ export const Slider: React.FC<SliderProps> = ({
 }) => {
     const percentage = Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));
 
-    // Generate tick positions (exclude first and last to avoid edge clutter)
     const ticks = React.useMemo(() => {
         if (!showTicks || step <= 0) return [];
         const count = Math.round((max - min) / step);
         const result: number[] = [];
-        for (let i = 1; i < count; i++) {
+        // Hide first and last tick
+        for (let i = 2; i < count - 1; i++) {
             result.push((i / count) * 100);
         }
         return result;
@@ -42,25 +41,28 @@ export const Slider: React.FC<SliderProps> = ({
 
             {/* Fill track */}
             <div
-                className="absolute left-0 top-0 bottom-0 bg-text-main/15 pointer-events-none"
+                className="absolute left-0 top-0 bottom-0 bg-text-main/15 pointer-events-none rounded-[7px]"
                 style={{ width: `${percentage}%` }}
             />
 
             {/* Tick marks */}
-            {ticks.map((pos) => (
-                <div
-                    key={pos}
-                    className="absolute top-[20%] bottom-[20%] w-px pointer-events-none"
-                    style={{
-                        left: `${pos}%`,
-                        background: pos < percentage
-                            ? 'rgba(255,255,255,0.25)'   // inside fill — lighter
-                            : 'rgba(255,255,255,0.12)',  // outside fill — subtler
-                    }}
-                />
-            ))}
+            {ticks.map((pos) => {
+                // We hide tick on current value
+                if (Math.abs(pos - percentage) < 0.1) return null;
+                return (
+                    <div
+                        key={pos}
+                        className="absolute top-[20%] bottom-[20%] w-px pointer-events-none"
+                        style={{
+                            left: `${pos}%`,
+                            background: pos < percentage
+                                ? 'rgba(255,255,255,0.25)'
+                                : 'rgba(255,255,255,0.12)',
+                        }}
+                    />
+                );
+            })}
 
-            {/* Invisible native range input for interaction */}
             <input
                 type="range"
                 min={min}
@@ -72,7 +74,6 @@ export const Slider: React.FC<SliderProps> = ({
                 className="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize m-0 p-0"
             />
 
-            {/* Label + value */}
             <div className="relative z-10 flex justify-between w-full px-[12px] pointer-events-none">
                 <span className="font-sans text-[12px] text-text-main select-none">
                     {label}
@@ -84,4 +85,4 @@ export const Slider: React.FC<SliderProps> = ({
 
         </div>
     );
-};
+};

@@ -213,6 +213,46 @@ def get_video_total_frames(video_path: str) -> int:
         return 0
 
 # ---------------------------------------------------------------------------
+# Thumbnail generation
+# ---------------------------------------------------------------------------
+
+PROJECTS_ASSETS_DIR = os.path.abspath("projects_assets")
+
+def generate_thumbnail(video_path: str, project_id: str) -> str:
+    """
+    Extract the first frame of *video_path* and save it as a JPEG thumbnail
+    inside projects_assets/<project_id>/thumb.jpg.
+    Returns the URL path string, or the default fallback on failure.
+    """
+    default = "/projects_assets/default_thumb.webp"
+    try:
+        thumb_dir = os.path.join(PROJECTS_ASSETS_DIR, project_id)
+        os.makedirs(thumb_dir, exist_ok=True)
+        thumb_path = os.path.join(thumb_dir, "thumb.jpg")
+
+        cmd = [
+            "ffmpeg", "-y",
+            "-ss", "0",
+            "-i", video_path,
+            "-frames:v", "1",
+            "-q:v", "3",
+            thumb_path,
+        ]
+        result = subprocess.run(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30
+        )
+        if result.returncode == 0 and os.path.exists(thumb_path):
+            print(f"[THUMB] Generated thumbnail for {project_id}")
+            return f"/projects_assets/{project_id}/thumb.jpg"
+        else:
+            print(f"[THUMB] ffmpeg failed (rc={result.returncode}): {result.stderr.decode(errors='ignore')[:200]}")
+            return default
+    except Exception as e:
+        print(f"[THUMB] Could not generate thumbnail: {e}")
+        return default
+
+
+# ---------------------------------------------------------------------------
 # FastAPI app
 # ---------------------------------------------------------------------------
 
@@ -340,11 +380,13 @@ def background_pipeline(file_path: str, project_id: str, title: str):
         _set_status({"status": "done", "progress": 100})
         upload_filename = os.path.basename(file_path)
 
+        thumb_url = generate_thumbnail(file_path, project_id)
+
         new_project = {
             "id": project_id,
             "title": title,
             "lastOpened": datetime.now().strftime("%Y-%m-%d"),
-            "img": "/projects_assets/default_thumb.webp",
+            "img": thumb_url,
             "splat_url":               f"{BASE_URL}/exports/{project_id}/splat.ply",
             "proxy_url":               f"{BASE_URL}/exports/{project_id}/mesh.obj",
             "cameras_url":             f"{BASE_URL}/api/projects/{project_id}/cameras",

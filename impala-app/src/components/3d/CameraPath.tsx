@@ -21,12 +21,12 @@ export const CameraPath = () => {
             if (f.length < 12) return null;
 
             const mat = new THREE.Matrix4().set(
-                f[0], f[1], f[2],  f[3],
-                f[4], f[5], f[6],  f[7],
+                f[0], f[1], f[2], f[3],
+                f[4], f[5], f[6], f[7],
                 f[8], f[9], f[10], f[11],
-                0,    0,    0,     1
+                0, 0, 0, 1
             );
-            
+
             const finalMatrix = new THREE.Matrix4().multiplyMatrices(WORLD_ROTATION, mat);
 
             const pos = new THREE.Vector3();
@@ -37,7 +37,7 @@ export const CameraPath = () => {
 
     const currentLookVector = useMemo(() => {
         if (!cameraData || !cameraData[currentFrame]) return null;
-        
+
         const frame = cameraData[currentFrame];
         const raw = frame.transform || frame.camera_to_world || frame.transform_matrix;
         if (!raw) return null;
@@ -46,12 +46,12 @@ export const CameraPath = () => {
         if (f.length < 12) return null;
 
         const mat = new THREE.Matrix4().set(
-            f[0], f[1], f[2],  f[3],
-            f[4], f[5], f[6],  f[7],
+            f[0], f[1], f[2], f[3],
+            f[4], f[5], f[6], f[7],
             f[8], f[9], f[10], f[11],
-            0,    0,    0,     1
+            0, 0, 0, 1
         );
-        
+
         const finalMatrix = new THREE.Matrix4().multiplyMatrices(WORLD_ROTATION, mat);
 
         const pos = new THREE.Vector3();
@@ -60,10 +60,10 @@ export const CameraPath = () => {
         // OpenGL camera looks down its local -Z axis
         const lookDir = new THREE.Vector3(0, 0, -1);
         lookDir.transformDirection(finalMatrix).normalize();
-        
+
         // Length of the look vector
         const lookTarget = pos.clone().add(lookDir.multiplyScalar(0.4));
-        
+
         return [pos, lookTarget];
     }, [cameraData, currentFrame]);
 
@@ -73,12 +73,12 @@ export const CameraPath = () => {
         <group name="camera-path">
             <Line points={points} color="#FF763B" lineWidth={3} transparent opacity={0.7} />
             <mesh position={points[0]}>
-                <sphereGeometry args={[0.05, 16, 16]} />
+                <sphereGeometry args={[0.02, 16, 16]} />
                 <meshBasicMaterial color="red" />
             </mesh>
             {points[currentFrame] && (
                 <mesh position={points[currentFrame]}>
-                    <sphereGeometry args={[0.07, 16, 16]} />
+                    <sphereGeometry args={[0.03, 16, 16]} />
                     <meshBasicMaterial color="white" />
                 </mesh>
             )}

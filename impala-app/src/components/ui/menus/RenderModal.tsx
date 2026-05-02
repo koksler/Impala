@@ -215,6 +215,26 @@ export const RenderModal: React.FC = () => {
     const isBlenderRunning = isBlenderEngine && blenderJobStatus !== null &&
         !['done', 'error', 'cancelled'].includes(blenderJobStatus ?? '');
 
+    const [isVisible, setIsVisible] = useState(false);
+
+    useEffect(() => {
+        if (isRenderModalOpen) {
+            const timer = setTimeout(() => setIsVisible(true), 10);
+            const handleEsc = (e: KeyboardEvent) => {
+                if (e.key === 'Escape' && !isExporting && !isBlenderRunning) {
+                    setIsRenderModalOpen(false);
+                }
+            };
+            window.addEventListener('keydown', handleEsc);
+            return () => {
+                clearTimeout(timer);
+                window.removeEventListener('keydown', handleEsc);
+            };
+        } else {
+            setIsVisible(false);
+        }
+    }, [isRenderModalOpen, setIsRenderModalOpen, isExporting, isBlenderRunning]);
+
     const formatTime = (frame: number) => {
         const totalSeconds = frame / (fps || 24);
         const mins = Math.floor(totalSeconds / 60);
@@ -239,7 +259,7 @@ export const RenderModal: React.FC = () => {
 
     return (
         <div
-            className="fixed inset-0 z-[100] flex items-center justify-center py-4 px-[15px] cursor-pointer bg-black/60"
+            className={`fixed inset-0 z-[100] flex items-center justify-center py-4 px-[15px] cursor-pointer bg-black/60 transition-opacity duration-100 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
             onClick={() => {
                 if (!isExporting && !isBlenderRunning) {
                     setIsRenderModalOpen(false);
@@ -247,7 +267,7 @@ export const RenderModal: React.FC = () => {
             }}
         >
             <div
-                className="flex gap-4 w-full h-[924px] max-h-[95vh] cursor-default"
+                className={`flex gap-4 w-full h-[924px] max-h-[95vh] cursor-default transition-all duration-100 ease-out transform ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}
                 onClick={e => e.stopPropagation()}
             >
 
@@ -258,6 +278,21 @@ export const RenderModal: React.FC = () => {
                     <h3 className="text-[16px] text-text-main font-bold mb-3">Output control</h3>
 
                     <div className="flex flex-col gap-3">
+                        {/* Custom Filename */}
+                        <div className="bg-bg-item/50 rounded-[16px] px-5 py-3 flex justify-between items-center">
+                            <div className="flex flex-col gap-1">
+                                <span className="font-bold text-[16px] text-text-main">Filename</span>
+                                <span className="text-text-main/60 text-[12px]">Designate the target file output name.</span>
+                            </div>
+                            <div className="flex justify-end">
+                                <TextInputRow
+                                    label=""
+                                    value={exportFilename}
+                                    onChange={setExportFilename}
+                                />
+                            </div>
+                        </div>
+
                         {/* Resolution */}
                         <div className="bg-bg-item/50 rounded-[16px] px-5 py-3 flex justify-between items-center">
                             <div className="flex flex-col gap-1">
@@ -284,21 +319,6 @@ export const RenderModal: React.FC = () => {
                                     options={['.mp4', '.webm']}
                                     value={exportFormat}
                                     onChange={setExportFormat}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Custom Filename */}
-                        <div className="bg-bg-item/50 rounded-[16px] px-5 py-3 flex justify-between items-center">
-                            <div className="flex flex-col gap-1">
-                                <span className="font-bold text-[16px] text-text-main">Filename</span>
-                                <span className="text-text-main/60 text-[12px]">Designate the target file output name.</span>
-                            </div>
-                            <div className="flex justify-end">
-                                <TextInputRow
-                                    label=""
-                                    value={exportFilename}
-                                    onChange={setExportFilename}
                                 />
                             </div>
                         </div>

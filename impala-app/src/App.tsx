@@ -59,6 +59,9 @@ export default function App() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept any shortcuts on the home page
+      if (currentPage === 'home') return;
+
       const ctrl = e.ctrlKey || e.metaKey;
 
       if (ctrl && (e.code === 'KeyS' || e.key.toLowerCase() === 's')) {
@@ -120,7 +123,7 @@ export default function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setActiveTool, setIsCropping]);
+  }, [currentPage, setActiveTool, setIsCropping]);
 
   const handleOpenProject = (project: Project) => {
     const { addToast, updateToast, loadProjectSettings } = useStore.getState();

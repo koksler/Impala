@@ -1,7 +1,7 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useStore } from '../../store';
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 
 export const EnvironmentBaker = () => {
     const { gl, scene } = useThree();
@@ -25,6 +25,12 @@ export const EnvironmentBaker = () => {
         
         return [rt, cam, pCam, pt];
     }, []);
+
+    // Dispose GPU resources on unmount
+    useEffect(() => () => {
+        renderTarget.dispose();
+        previewRT.dispose();
+    }, [renderTarget, previewRT]);
 
     useFrame(() => {
         if (isBakingEnv) {

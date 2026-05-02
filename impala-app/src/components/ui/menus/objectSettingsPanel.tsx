@@ -184,7 +184,7 @@ export const ObjectSettingsPanel: React.FC<ObjectSettingsPanelProps> = ({ isMini
                         onClick={onToggleMinimize}
                         aria-label={isMinimized ? "Maximize panel" : "Minimize panel"}
                     >
-                        {isMinimized ? <MaximizeIcon className="w-5 h-5" /> : <MinimizeIcon className="w-5 h-5" />}
+                        {isMinimized ? <MaximizeIcon /> : <MinimizeIcon />}
                     </Button>
                 </Tooltip>
             </div>
@@ -195,11 +195,16 @@ export const ObjectSettingsPanel: React.FC<ObjectSettingsPanelProps> = ({ isMini
 
                     {/* Objects List */}
                     <SectionHeader title="Objects in this project" onAdd={triggerModelImport} />
-                    <div className="mt-[10px] flex flex-col gap-[6px]">
+                    <div className="mt-[10px] flex flex-col gap-[6px] px-[12px]">
+                        {customModels.length === 0 && (
+                            <span className="text-[0.75rem] text-item-border px-[2px]">There're no objects for now :(</span>
+                        )}
                         {customModels.map(model => (
-                            <div key={model.id} className="relative cursor-pointer" onClick={() => setActiveModelId(model.id)}>
-                                {/* Active indicator */}
-                                <div className={`absolute -left-[4px] top-0 bottom-0 w-[3px] rounded-l-[6px] ${activeModelId === model.id ? 'bg-[var(--color-accent)]' : 'bg-transparent'}`} />
+                            <div
+                                key={model.id}
+                                className={`relative cursor-pointer py-[4px] transition-colors ${activeModelId === model.id ? 'bg-accent/20 rounded-[7px]' : 'bg-transparent'}`}
+                                onClick={() => setActiveModelId(model.id)}
+                            >
                                 <ObjectListItem
                                     name={model.name.includes('.') ? model.name.split('.').slice(0, -1).join('.') : model.name}
                                     extension={model.name.includes('.') ? model.name.slice(model.name.lastIndexOf('.')) : '.glb'}

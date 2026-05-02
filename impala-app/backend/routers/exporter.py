@@ -16,7 +16,32 @@ router = APIRouter()
 
 EXPORT_DIR = os.path.abspath("exports")
 UPLOAD_DIR = os.path.abspath("uploads")
+PROJECTS_ASSETS_DIR = os.path.abspath("projects_assets")
 PROJECTS_FILE = os.path.abspath(os.path.join("data", "projects.json"))
+
+def generate_thumbnail(video_path: str, project_id: str) -> str:
+    """Extract the first frame of video_path as a JPEG thumbnail."""
+    default = "/projects_assets/default_thumb.webp"
+    try:
+        thumb_dir = os.path.join(PROJECTS_ASSETS_DIR, project_id)
+        os.makedirs(thumb_dir, exist_ok=True)
+        thumb_path = os.path.join(thumb_dir, "thumb.jpg")
+        cmd = [
+            "ffmpeg", "-y", "-ss", "0",
+            "-i", video_path,
+            "-frames:v", "1",
+            "-q:v", "3",
+            thumb_path,
+        ]
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
+        if result.returncode == 0 and os.path.exists(thumb_path):
+            print(f"[THUMB] Generated thumbnail for {project_id}")
+            return f"/projects_assets/{project_id}/thumb.jpg"
+        print(f"[THUMB] ffmpeg failed: {result.stderr.decode(errors='ignore')[:200]}")
+        return default
+    except Exception as e:
+        print(f"[THUMB] Error: {e}")
+        return default
 
 def is_safe_path(base_dir: str, target_path: str) -> bool:
     """Cryptographically ensure the target path resolves strictly inside the designated base directory."""
@@ -335,12 +360,14 @@ async def import_project(
             shutil.copyfileobj(dataparser.file, buffer)
         dp_url = f"http://localhost:8000/api/projects/{project_id}/dataparser-transforms"
 
+    thumb_url = generate_thumbnail(video_path, project_id)
+
     # Create project entry
     new_project = {
         "id": project_id,
         "title": title,
         "lastOpened": datetime.now().strftime("%Y-%m-%d"),
-        "img": "/projects_assets/default_thumb.webp",
+        "img": thumb_url,
         "splat_url": f"http://localhost:8000/exports/{project_id}/splat.ply",
         "cameras_url": f"http://localhost:8000/api/projects/{project_id}/cameras",
         "video_url": f"http://localhost:8000/uploads/{video_filename}",

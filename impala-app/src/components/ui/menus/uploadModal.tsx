@@ -19,17 +19,30 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
 
     // НОВЫЙ СТЕЙТ ДЛЯ DRAG & DROP
     const [isDragging, setIsDragging] = useState(false);
+    const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
-        if (!isOpen) {
+        if (isOpen) {
+            const timer = setTimeout(() => setIsVisible(true), 10);
+            const handleEsc = (e: KeyboardEvent) => {
+                if (e.key === 'Escape' && isOpen && status === 'idle') {
+                    onClose();
+                }
+            };
+            window.addEventListener('keydown', handleEsc);
+            return () => {
+                clearTimeout(timer);
+                window.removeEventListener('keydown', handleEsc);
+            };
+        } else {
+            setIsVisible(false);
             setStatus('idle');
             setProgress(0);
             setFile(null);
             setIsDragging(false);
         }
-    }, [isOpen]);
+    }, [isOpen, status, onClose]);
 
-    // === ОБРАБОТЧИКИ DRAG & DROP ===
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
         setIsDragging(true);
@@ -47,7 +60,6 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
             setFile(e.dataTransfer.files[0]);
         }
     };
-    // ===============================
 
     const handleStart = async () => {
         const { addToast, backendUrl } = useStore.getState();
@@ -98,8 +110,13 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 pointer-events-auto">
-            <div className="w-[480px] bg-bg border border-bg-border rounded-[15px] p-[24px] flex flex-col gap-[20px]">
+        <div
+            className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 pointer-events-auto transition-opacity duration-100 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+            onClick={(e) => {
+                if (e.target === e.currentTarget && status === 'idle') onClose();
+            }}
+        >
+            <div className={`w-[480px] bg-bg border border-bg-border rounded-[15px] p-[24px] flex flex-col gap-[20px] transition-all duration-100 ease-out transform ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
                 <h2 className="text-[16px] font-bold text-text-accent m-0">Create New Project</h2>
 
                 {status === 'idle' ? (
@@ -114,7 +131,6 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
                             />
                         </div>
 
-                        {/* === ОБНОВЛЕННАЯ ЗОНА ВЫБОРА ФАЙЛА === */}
                         <div className="flex flex-col gap-[8px]">
                             <label className="text-[14px] text-text-main font-medium">Media Source</label>
                             <div
@@ -165,7 +181,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
                         </div>
                         <ProgressBar progress={progress} />
                         <span className="text-[12px] text-item-border text-center mt-[10px]">
-                            GPU is heating up. This takes a few minutes.
+                            COLMAP could take eternity. Relax and wait :)
                         </span>
                     </div>
                 )}

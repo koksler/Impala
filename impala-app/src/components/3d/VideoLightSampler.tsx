@@ -3,13 +3,8 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useStore } from '../../store';
 
-/**
- * VideoLightSampler — samples the background video at 32×18 px every 4 frames
- * and imperatively updates scene lights so the 3D model shading adapts to
- * the actual scene lighting (golden hour, overcast, indoors, etc.).
- *
- * Runs entirely inside the R3F canvas via useFrame — zero React re-renders.
- */
+const LERP_FACTOR = 0.05;
+
 export const VideoLightSampler = () => {
     const { scene } = useThree();
     const videoElement = useStore(state => state.videoElement);
@@ -17,13 +12,13 @@ export const VideoLightSampler = () => {
 
     // Cached Three.js light refs — populated once on scene mount
     const hemiRef = useRef<THREE.HemisphereLight | null>(null);
-    const ambRef  = useRef<THREE.AmbientLight  | null>(null);
-    const dirRef  = useRef<THREE.DirectionalLight | null>(null);
+    const ambRef = useRef<THREE.AmbientLight | null>(null);
+    const dirRef = useRef<THREE.DirectionalLight | null>(null);
 
     // Tiny off-screen canvas for color extraction — created once
     const sampleCanvas = useMemo(() => {
         const c = document.createElement('canvas');
-        c.width  = 32;
+        c.width = 32;
         c.height = 18;
         return c;
     }, []);
@@ -41,9 +36,8 @@ export const VideoLightSampler = () => {
     // Cache light references (runs when scene is ready)
     useEffect(() => {
         scene.traverse(obj => {
-            if (obj instanceof THREE.HemisphereLight)  hemiRef.current = obj;
-            if (obj instanceof THREE.AmbientLight)     ambRef.current  = obj;
-            // Only grab the shadow-casting directional (our key light)
+            if (obj instanceof THREE.HemisphereLight) hemiRef.current = obj;
+            if (obj instanceof THREE.AmbientLight) ambRef.current = obj;
             if (obj instanceof THREE.DirectionalLight && obj.castShadow) dirRef.current = obj;
         });
     }, [scene]);
@@ -76,7 +70,7 @@ export const VideoLightSampler = () => {
                 // Rec. 601 luma approximation
                 totalLuma += 0.299 * r + 0.587 * g + 0.114 * b;
                 if (y < 9) { skyR += r; skyG += g; skyB += b; }
-                else       { groundR += r; groundG += g; groundB += b; }
+                else { groundR += r; groundG += g; groundB += b; }
             }
         }
 
@@ -99,18 +93,18 @@ export const VideoLightSampler = () => {
         const intensity = intensityRef.current;
 
         if (hemiRef.current) {
-            hemiRef.current.color.setRGB(skyNR, skyNG, skyNB);
-            hemiRef.current.groundColor.setRGB(gndNR, gndNG, gndNB);
-            hemiRef.current.intensity = intensity * 0.35 * brightScale;
+            hemiRef.current.color.lerp(new THREE.Color(skyNR, skyNG, skyNB), LERP_FACTOR);
+            hemiRef.current.groundColor.lerp(new THREE.Color(gndNR, gndNG, gndNB), LERP_FACTOR);
+            hemiRef.current.intensity += (intensity * 0.35 * brightScale - hemiRef.current.intensity) * LERP_FACTOR;
         }
 
         if (ambRef.current) {
-            ambRef.current.intensity = intensity * 0.15 * brightScale;
+            ambRef.current.intensity += (intensity * 0.15 * brightScale - ambRef.current.intensity) * LERP_FACTOR;
         }
 
         if (dirRef.current) {
-            dirRef.current.color.setRGB(dirR, dirG, dirB);
-            dirRef.current.intensity = intensity * brightScale;
+            dirRef.current.color.lerp(new THREE.Color(dirR, dirG, dirB), LERP_FACTOR);
+            dirRef.current.intensity += (intensity * brightScale - dirRef.current.intensity) * LERP_FACTOR;
         }
     });
 

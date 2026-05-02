@@ -85,9 +85,9 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
 
 
     return (
-        <div className="relative w-full h-full flex justify-center items-stretch p-[20px] gap-[20px] bg-bg pb-[40px] overflow-hidden">
+        <div className="relative w-full h-full flex items-stretch p-[20px] gap-[20px] bg-bg overflow-hidden">
             {/* Background Darkening Layer */}
-            <div className="absolute inset-0 bg-black/5 pointer-events-none z-0" />
+            <div className="absolute inset-0 bg-black/8 pointer-events-none z-0" />
 
 
             <UploadModal
@@ -132,7 +132,7 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
             />
 
 
-            <div className="relative z-10 flex flex-col gap-[20px] flex-1 max-w-[1208px]">
+            <div className="relative z-10 flex flex-col gap-[20px] flex-1">
                 <BannerCard
                     title={
                         <>Generate a <span className="text-accent">new scene</span><br />from image or video</>
@@ -173,32 +173,39 @@ export const HomePage: React.FC<{ onOpenProject: (project: Project) => void }> =
 
             <div className="relative z-10 flex-[0.35] h-full border border-bg-border rounded-[15px] px-[20px] py-[30px] flex flex-col bg-bg">
 
-                <h1 className="font-bold text-[24px] text-text-accent text-center m-0 mb-[20px]">
-                    Your previous projects
+                <h1 className="font-bold text-[1.5rem] text-text-accent text-center m-0 mb-5">
+                    Recent Projects
                 </h1>
 
-                <div className="mb-[20px]">
+                <div className="mb-5">
                     <SearchBar value={searchQuery} onChange={setSearchQuery} />
                 </div>
 
-                <div className="grid grid-cols-2 gap-[16px] overflow-y-auto flex-1 min-h-0 pr-2 pb-4 content-start">
+                <div className="grid grid-cols-2 gap-4 overflow-y-auto flex-1 min-h-0 pr-2 pb-4 content-start">
                     {loading ? (
-                        <p className="col-span-2 text-center text-text-main opacity-50">Loading projects…</p>
-                    ) : (
-                        projects
-                            .filter(p => p.title.toLowerCase().includes(searchQuery.toLowerCase()))
-                            .map(project => (
-                                <ProjectCard
-                                    key={project.id}
-                                    title={project.title}
-                                    date={formatDate(project.lastOpened)}
-                                    imageSrc={project.img}
-                                    onOpen={() => setProjectToOpen(project)}
-                                    onDelete={() => setProjectToDelete(project)}
-                                />
+                        <p className="col-span-2 text-center text-text-main opacity-50 text-[12px] py-10">Loading projects…</p>
+                    ) : (() => {
+                        const filtered = projects.filter(p => p.title.toLowerCase().includes(searchQuery.toLowerCase()));
 
-                            ))
-                    )}
+                        if (projects.length === 0) {
+                            return <p className="col-span-2 text-center text-text-main opacity-40 text-[12px] py-10">No projects yet.</p>;
+                        }
+
+                        if (filtered.length === 0) {
+                            return <p className="col-span-2 text-center text-text-main opacity-40 text-[12px] py-10">No projects match your search.</p>;
+                        }
+
+                        return filtered.map(project => (
+                            <ProjectCard
+                                key={project.id}
+                                title={project.title}
+                                date={formatDate(project.lastOpened)}
+                                imageSrc={project.img}
+                                onOpen={() => setProjectToOpen(project)}
+                                onDelete={() => setProjectToDelete(project)}
+                            />
+                        ));
+                    })()}
                 </div>
             </div>
         </div>

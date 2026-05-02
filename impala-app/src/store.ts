@@ -628,17 +628,33 @@ const storeCreator: StateCreator<AppState, [['zustand/persist', unknown]], []> =
 
     // ── App loading ──────────────────────────────────────────────────────────
 
-    isAppLoading: false,
+    isAppLoading: true,
     setIsAppLoading: (isAppLoading) => set({ isAppLoading }),
 
     // ── Export ───────────────────────────────────────────────────────────────
-
     isExporting: false,
 
     setIsExporting: (isExporting) => set({ isExporting }),
 
     startExportPipeline: () => {
-        get().exportVideo();
+        const state = get();
+        // Only bake for realtime — Blender handles its own lighting separately.
+        if (state.exportEngine === 'realtime' && !state.bakedEnvTexture) {
+            // Kick the baker and wait one frame for EnvironmentBaker useFrame to fire.
+            state.setIsBakingEnv(true);
+            // Poll until the baker has finished (isBakingEnv flips back to false)
+            // then start the export pipeline.
+            const waitForBake = () => {
+                if (useStore.getState().isBakingEnv) {
+                    requestAnimationFrame(waitForBake);
+                } else {
+                    get().exportVideo();
+                }
+            };
+            requestAnimationFrame(waitForBake);
+        } else {
+            get().exportVideo();
+        }
     },
 
     exportVideo: async () => {
@@ -777,8 +793,8 @@ const storeCreator: StateCreator<AppState, [['zustand/persist', unknown]], []> =
                 get().setCurrentFrame(i);
 
                 if (!get().isExporting) {
-                    state.updateToast(toastId, { type: 'error', title: 'Export Cancelled', message: 'Render aborted by user.' });
-                    break;
+                    state.removeToast(toastId);
+                    return;
                 }
 
                 // 1. Sync video
@@ -974,6 +990,11 @@ const storeCreator: StateCreator<AppState, [['zustand/persist', unknown]], []> =
                 });
             }
 
+            if (!get().isExporting) {
+                state.removeToast(toastId);
+                return;
+            }
+
             state.updateToast(toastId, { message: 'Encoding video with FFmpeg...', progress: 100 });
 
             const payload = {
@@ -1010,7 +1031,11 @@ const storeCreator: StateCreator<AppState, [['zustand/persist', unknown]], []> =
 
         } catch (error) {
             console.error('[EXPORT]', error);
-            state.updateToast(toastId, { type: 'error', title: 'Export Failed', message: 'Check console for errors.' });
+            if (get().isExporting) {
+                state.updateToast(toastId, { type: 'error', title: 'Export Failed', message: 'Check console for errors.' });
+            } else {
+                state.removeToast(toastId);
+            }
         } finally {
             // ── Restore WebGL renderer state ─────────────────────────────────
             gl.setSize(oldSize.x, oldSize.y, true);

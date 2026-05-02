@@ -29,7 +29,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ title, date, imageSrc,
                 onClick={(e) => { e.stopPropagation(); onDelete(); }}
                 className='mt-auto mb-auto mr-2'
                 >
-                    <TrashIcon className="w-5 h-5 text-text-main" />
+                    <TrashIcon className="text-text-main" />
                 </Button>
 
             </div>

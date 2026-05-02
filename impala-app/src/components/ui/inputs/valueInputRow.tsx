@@ -4,6 +4,7 @@ interface ValueInputRowProps {
     label: string;
     value: string | number;
     unit?: string;
+    step?: number;
     onChange: (value: string) => void;
     onFinishChange?: () => void;
     className?: string;
@@ -13,6 +14,7 @@ export const ValueInputRow: React.FC<ValueInputRowProps> = ({
     label,
     value,
     unit = '',
+    step = 1,
     onChange,
     onFinishChange,
     className = ''
@@ -24,7 +26,8 @@ export const ValueInputRow: React.FC<ValueInputRowProps> = ({
             </span>
             <div className="flex items-center justify-end w-full ml-4">
                 <input
-                    type="text"
+                    type="number"
+                    step={step}
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
                     onBlur={onFinishChange}
@@ -33,7 +36,7 @@ export const ValueInputRow: React.FC<ValueInputRowProps> = ({
                             (e.target as HTMLInputElement).blur();
                         }
                     }}
-                    className="w-full bg-transparent border-none outline-none text-right font-sans text-[12px] text-text-main focus:ring-0 p-0 m-0"
+                    className="w-full bg-transparent border-none outline-none text-right font-sans text-[12px] text-text-main focus:ring-0 p-0 m-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
 
                 {unit && (

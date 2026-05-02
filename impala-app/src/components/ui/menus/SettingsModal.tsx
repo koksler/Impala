@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useStore } from '../../../store';
 import { SegmentedControl } from '../inputs/SegmentedControl';
 import { Dropdown } from '../inputs/Dropdown';
@@ -21,6 +21,7 @@ import {
 export const SettingsModal: React.FC = () => {
     const {
         setIsSettingsOpen,
+        isSettingsOpen,
         settingsTab,
         setSettingsTab,
         colorScheme,
@@ -48,6 +49,26 @@ export const SettingsModal: React.FC = () => {
         addToast,
         updateToast,
     } = useStore();
+
+    const [isVisible, setIsVisible] = React.useState(false);
+
+    useEffect(() => {
+        if (isSettingsOpen) {
+            const timer = setTimeout(() => setIsVisible(true), 10);
+            const handleEsc = (e: KeyboardEvent) => {
+                if (e.key === 'Escape') setIsSettingsOpen(false);
+            };
+            window.addEventListener('keydown', handleEsc);
+            return () => {
+                clearTimeout(timer);
+                window.removeEventListener('keydown', handleEsc);
+            };
+        } else {
+            setIsVisible(false);
+        }
+    }, [isSettingsOpen, setIsSettingsOpen]);
+
+    if (!isSettingsOpen) return null;
 
     const handleCleanCache = async () => {
         const toastId = addToast('Cleaning Cache', 'Removing temporary files...', 'process');
@@ -131,7 +152,7 @@ export const SettingsModal: React.FC = () => {
                                     title="Revert to default"
                                     className="opacity-60 hover:opacity-100"
                                 >
-                                    <UndoIcon className="w-5 h-5 text-text-main" />
+                                    <UndoIcon className="text-text-main" />
                                 </Button>
 
                                 <div className="bg-accent rounded-[12px] flex items-center justify-center w-[250px] px-1.5 py-4">
@@ -162,19 +183,7 @@ export const SettingsModal: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="bg-bg-item/50 rounded-[16px] px-5 py-3 flex justify-between items-center">
-                            <div className="flex flex-col gap-1">
-                                <span className="font-bold text-[16px] text-text-main">UI Scale</span>
-                                <span className="text-text-main/60 text-[12px]">Nicely remembered scale adjustment</span>
-                            </div>
-                            <div className="w-[200px] flex justify-end">
-                                <Dropdown
-                                    options={['Compact', 'Normal', 'Large']}
-                                    value={uiScale}
-                                    onChange={setUiScale}
-                                />
-                            </div>
-                        </div>
+
 
                         <div className="bg-bg-item/50 rounded-[16px] px-5 py-3 flex justify-between items-center">
                             <div className="flex flex-col gap-1">
@@ -190,17 +199,15 @@ export const SettingsModal: React.FC = () => {
                             </div>
                         </div>
 
-                        <UnderConstruction>
-                            <div className="bg-bg-item/50 rounded-[16px] px-5 py-3 flex justify-between items-center">
-                                <div className="flex flex-col gap-1">
-                                    <span className="font-bold text-[16px] text-text-main">Autosave</span>
-                                    <span className="text-text-main/60 text-[12px]">If on that'll save it every 5 minutes.</span>
-                                </div>
-                                <div className="flex justify-end">
-                                    <Toggle checked={autosave} onChange={setAutosave} activeColor="accent" />
-                                </div>
+                        <div className="bg-bg-item/50 rounded-[16px] px-5 py-3 flex justify-between items-center">
+                            <div className="flex flex-col gap-1">
+                                <span className="font-bold text-[16px] text-text-main">Autosave</span>
+                                <span className="text-text-main/60 text-[12px]">If on that'll save it every 5 minutes.</span>
                             </div>
-                        </UnderConstruction>
+                            <div className="flex justify-end">
+                                <Toggle checked={autosave} onChange={setAutosave} activeColor="accent" />
+                            </div>
+                        </div>
                     </div>
                 );
             case 'Generation':
@@ -330,11 +337,11 @@ export const SettingsModal: React.FC = () => {
 
     return (
         <div
-            className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center"
+            className={`fixed inset-0 z-[100] bg-black/60 flex items-center justify-center transition-opacity duration-100 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
             onClick={() => setIsSettingsOpen(false)}
         >
             <div
-                className="bg-bg border border-bg-border rounded-[15px] overflow-hidden flex w-[1100px] h-[700px]"
+                className={`bg-bg border border-bg-border rounded-[15px] overflow-hidden flex w-[1100px] h-[700px] transition-all duration-100 ease-out transform ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* LEFT SIDEBAR */}
@@ -373,7 +380,7 @@ export const SettingsModal: React.FC = () => {
                             variant="icon"
                             onClick={() => setIsSettingsOpen(false)}
                         >
-                            <MinimizeIcon className="w-6 h-6 text-text-main" />
+                            <MinimizeIcon className="text-text-main" />
                         </Button>
                     </header>
 

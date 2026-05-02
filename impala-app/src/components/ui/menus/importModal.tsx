@@ -20,6 +20,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onSuc
     const [camerasFile, setCamerasFile] = useState<File | null>(null);
     const [metadataFile, setMetadataFile] = useState<File | null>(null);
     const [isImporting, setIsImporting] = useState(false);
+    const [isVisible, setIsVisible] = useState(false);
 
     // dragging states
     const [dragActive, setDragActive] = useState<{ [key: string]: boolean }>({});
@@ -30,7 +31,20 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onSuc
     const metadataRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        if (!isOpen) {
+        if (isOpen) {
+            const timer = setTimeout(() => setIsVisible(true), 10);
+            const handleEsc = (e: KeyboardEvent) => {
+                if (e.key === 'Escape' && isOpen && !isImporting) {
+                    onClose();
+                }
+            };
+            window.addEventListener('keydown', handleEsc);
+            return () => {
+                clearTimeout(timer);
+                window.removeEventListener('keydown', handleEsc);
+            };
+        } else {
+            setIsVisible(false);
             setVideoFile(null);
             setSplatFile(null);
             setCamerasFile(null);
@@ -38,7 +52,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onSuc
             setProjectName('Imported Project');
             setDragActive({});
         }
-    }, [isOpen]);
+    }, [isOpen, isImporting, onClose]);
 
     const handleDrag = (e: React.DragEvent, id: string, active: boolean) => {
         e.preventDefault();
@@ -96,11 +110,11 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onSuc
 
     return (
         <div 
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 pointer-events-auto"
+            className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 pointer-events-auto transition-opacity duration-100 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
             onClick={(e) => e.target === e.currentTarget && onClose()}
         >
             <div 
-                className="w-[520px] bg-bg border border-bg-border rounded-[15px] p-[24px] flex flex-col gap-[20px]"
+                className={`w-[520px] bg-bg border border-bg-border rounded-[15px] p-[24px] flex flex-col gap-[20px] transition-all duration-100 ease-out transform ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex justify-between items-center">

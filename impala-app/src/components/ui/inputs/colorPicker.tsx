@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { HexColorPicker } from 'react-colorful';
 
-/* I'll rewrite it, sometime 
+/* 
 
-TODO: Weird behavior with hue-selector when
-color is set to #FFFFFF or #000000
+Hue is stored in a ref so it survives transitions through
+#FFFFFF / #000000 (where saturation = 0 and hue is undefined).
 
 */
 
@@ -62,8 +62,24 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
 }) => {
     const [inputValue, setInputValue] = useState(color);
     const hueTrackRef = useRef<HTMLDivElement>(null);
+    // Persist hue independently — when s=0 (white/black) getHSV returns h=0,
+    // but we want to remember where the user last placed the hue thumb.
+    const storedHue = useRef<number>(getHSV(color).h);
+    const prevColorRef = useRef<string>(color);
 
     useEffect(() => { setInputValue(color); }, [color]);
+
+    // Sync storedHue when an *external* color change carries a meaningful hue
+    // (i.e. the saturation picker moved, not the hue slider).
+    useEffect(() => {
+        if (color !== prevColorRef.current) {
+            prevColorRef.current = color;
+            const { h, s } = getHSV(color);
+            if (s > 0.001) {
+                storedHue.current = h;
+            }
+        }
+    }, [color]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
@@ -78,9 +94,12 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
         const rect = hueTrackRef.current.getBoundingClientRect();
         const y = Math.max(0, Math.min(clientY - rect.top, rect.height));
         const newHue = (y / rect.height) * 360;
-        
+
+        storedHue.current = newHue;
         const { s, v } = getHSV(color);
-        onChange(hsvToHex(newHue, s, v));
+        // When s is 0 (white/black), nudge it slightly so the hue becomes visible
+        // on the next saturation pick — but don't force a color change here.
+        onChange(hsvToHex(newHue, Math.max(s, 0.001), Math.max(v, 0.001)));
     };
 
     const handlePointerDown = (e: React.PointerEvent) => {
@@ -99,7 +118,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
         onFinishChange?.();
     };
 
-    const currentHue = getHSV(color).h;
+    const currentHue = storedHue.current;
 
     return (
         <div className={`w-full flex flex-col gap-[10px] ${className}`} onPointerUp={() => {
@@ -133,7 +152,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
             </div>
 
             <div className="w-full h-[120px] flex gap-[10px]">
-                <div className="flex-1 h-full customized-saturation-only rounded-[7px] overflow-hidden">
+                <div className="flex-1 h-full customized-saturation-only rounded-[7px] overflow-hidden border border-item-border">
                     <HexColorPicker color={color} onChange={onChange} style={{ width: '100%', height: '100%' }} />
                 </div>
 
@@ -142,7 +161,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
                     onPointerDown={handlePointerDown}
                     onPointerMove={handlePointerMove}
                     onPointerUp={handlePointerUp}
-                    className="relative w-[28px] h-full rounded-[7px] cursor-ns-resize touch-none"
+                    className="relative w-[28px] h-full rounded-[7px] cursor-ns-resize touch-none border border-item-border"
                     style={{
                         background: 'linear-gradient(to bottom, #f00 0%, #ff0 17%, #0f0 33%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%)'
                     }}
