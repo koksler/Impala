@@ -1,19 +1,8 @@
 [
     {
-        "id": "195fb4c2-23dc-4625-9da3-0e9e78890856",
-        "title": "Test 0",
-        "lastOpened": "2026-04-20",
-        "img": "/projects_assets/default_thumb.webp",
-        "splat_url": "http://localhost:8000/exports/195fb4c2-23dc-4625-9da3-0e9e78890856/splat.ply",
-        "proxy_url": "http://localhost:8000/exports/195fb4c2-23dc-4625-9da3-0e9e78890856/mesh.obj",
-        "cameras_url": "http://localhost:8000/api/projects/195fb4c2-23dc-4625-9da3-0e9e78890856/cameras",
-        "video_url": "http://localhost:8000/uploads/195fb4c2-23dc-4625-9da3-0e9e78890856.mp4",
-        "dataparser_transforms_url": "http://localhost:8000/api/projects/195fb4c2-23dc-4625-9da3-0e9e78890856/dataparser-transforms"
-    },
-    {
         "id": "6f48991c-fdbf-4338-8616-0e25067bbc77",
         "title": "Testing Grounds",
-        "lastOpened": "2026-04-20",
+        "lastOpened": "2026-05-02",
         "img": "/projects_assets/default_thumb.webp",
         "splat_url": "http://localhost:8000/exports/6f48991c-fdbf-4338-8616-0e25067bbc77/splat.ply",
         "proxy_url": "http://localhost:8000/exports/6f48991c-fdbf-4338-8616-0e25067bbc77/mesh.obj",
@@ -21,14 +10,67 @@
         "video_url": "http://localhost:8000/uploads/6f48991c-fdbf-4338-8616-0e25067bbc77.mp4",
         "dataparser_transforms_url": "http://localhost:8000/api/projects/6f48991c-fdbf-4338-8616-0e25067bbc77/dataparser-transforms",
         "objPos": [
-            -0.8527325885543977,
-            -0.7359567608485469,
-            -0.28136346194332484
+            0.0,
+            0.5,
+            0.0
         ],
         "objRot": [
-            -2.723962218284403,
-            1.1864837680955977,
-            2.6955378929597167
+            0.0,
+            0.0,
+            0.0
+        ],
+        "objScale": [
+            1.0,
+            1.0,
+            1.0
+        ],
+        "scenePos": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "sceneRot": [
+            -0.16047479726671396,
+            0.0,
+            0.0
+        ],
+        "sceneScale": [
+            1.0,
+            1.0,
+            1.0
+        ],
+        "shadowOpacity": 1.0,
+        "shadowBlur": 1.0,
+        "shadowColor": "#c0b024",
+        "matRoughness": 0.75,
+        "matMetallic": 0.0,
+        "envIntensity": 1.0,
+        "envRotation": 0.0,
+        "envTint": "#ffffff",
+        "customModelUrl": null,
+        "customModelName": null,
+        "savedSplatUrl": "/exports/6f48991c-fdbf-4338-8616-0e25067bbc77/splat_cropped_2c187483.ply",
+        "customModels": [],
+        "activeModelId": null
+    },
+    {
+        "id": "cb308b2a-60cd-465e-8ab8-fcd1aa114607",
+        "title": "New 3D Scene",
+        "lastOpened": "2026-04-30",
+        "img": "/projects_assets/default_thumb.webp",
+        "splat_url": "http://localhost:8000/exports/cb308b2a-60cd-465e-8ab8-fcd1aa114607/splat.ply",
+        "cameras_url": "http://localhost:8000/api/projects/cb308b2a-60cd-465e-8ab8-fcd1aa114607/cameras",
+        "video_url": "http://localhost:8000/uploads/cb308b2a-60cd-465e-8ab8-fcd1aa114607.mp4",
+        "dataparser_transforms_url": "http://localhost:8000/api/projects/cb308b2a-60cd-465e-8ab8-fcd1aa114607/dataparser-transforms",
+        "objPos": [
+            -0.9753663111413104,
+            -0.7497616920544696,
+            -0.36678306617664347
+        ],
+        "objRot": [
+            0.0,
+            1.3360450738819725,
+            0.0
         ],
         "objScale": [
             0.05,
@@ -51,66 +93,58 @@
             1.0
         ],
         "shadowOpacity": 1.0,
-        "shadowBlur": 1.0,
+        "shadowBlur": 0.7,
         "shadowColor": "#c0b024",
         "matRoughness": 0.75,
         "matMetallic": 0.0,
         "envIntensity": 1.0,
         "envRotation": 0.0,
         "envTint": "#ffffff",
-        "customModelUrl": "http://localhost:8000/projects_assets/6f48991c-fdbf-4338-8616-0e25067bbc77/model.glb",
-        "customModelName": "model.glb",
-        "savedSplatUrl": "/exports/6f48991c-fdbf-4338-8616-0e25067bbc77/splat_cropped_2c187483.ply"
-    },
-    {
-        "id": "cb308b2a-60cd-465e-8ab8-fcd1aa114607",
-        "title": "New 3D Scene",
-        "lastOpened": "2026-04-20",
-        "img": "/projects_assets/default_thumb.webp",
-        "splat_url": "http://localhost:8000/exports/cb308b2a-60cd-465e-8ab8-fcd1aa114607/splat.ply",
-        "cameras_url": "http://localhost:8000/api/projects/cb308b2a-60cd-465e-8ab8-fcd1aa114607/cameras",
-        "video_url": "http://localhost:8000/uploads/cb308b2a-60cd-465e-8ab8-fcd1aa114607.mp4",
-        "dataparser_transforms_url": "http://localhost:8000/api/projects/cb308b2a-60cd-465e-8ab8-fcd1aa114607/dataparser-transforms",
-        "objPos": [
-            -0.8527325885543977,
-            -0.7359567608485469,
-            -0.28136346194332484
+        "savedSplatUrl": "/exports/cb308b2a-60cd-465e-8ab8-fcd1aa114607/splat_cropped_3b28e0e3.ply",
+        "customModelUrl": "http://localhost:8000/projects_assets/cb308b2a-60cd-465e-8ab8-fcd1aa114607/4076ef61_kasane_teto_plush.glb",
+        "customModelName": "kasane_teto_plush.glb",
+        "customModels": [
+            {
+                "id": "dsgsfhy",
+                "url": "http://localhost:8000/projects_assets/cb308b2a-60cd-465e-8ab8-fcd1aa114607/463e6898_tiny-retro-computer_1K_8bdc37e6-0ec0-4ec5-ac73-5b825b83c024.glb",
+                "name": "tiny-retro-computer_1K_8bdc37e6-0ec0-4ec5-ac73-5b825b83c024.glb",
+                "pos": [
+                    -0.6035882225686886,
+                    -1.0198220909841174,
+                    -1.0680150484247024
+                ],
+                "rot": [
+                    0,
+                    0.8162000648694072,
+                    0
+                ],
+                "scale": [
+                    1,
+                    1,
+                    1
+                ]
+            },
+            {
+                "id": "ilepgs6",
+                "url": "http://localhost:8000/projects_assets/cb308b2a-60cd-465e-8ab8-fcd1aa114607/4076ef61_kasane_teto_plush.glb",
+                "name": "kasane_teto_plush.glb",
+                "pos": [
+                    -0.9753663111413104,
+                    -0.7497616920544696,
+                    -0.36678306617664347
+                ],
+                "rot": [
+                    0,
+                    1.3360450738819725,
+                    0
+                ],
+                "scale": [
+                    0.05,
+                    0.05,
+                    0.05
+                ]
+            }
         ],
-        "objRot": [
-            -2.5827208246877964,
-            1.1864837680955982,
-            2.6955378929597167
-        ],
-        "objScale": [
-            1.0,
-            1.0,
-            1.0
-        ],
-        "scenePos": [
-            0.0,
-            0.0,
-            0.0
-        ],
-        "sceneRot": [
-            -0.16047479726671396,
-            0.0,
-            0.0
-        ],
-        "sceneScale": [
-            1.0,
-            1.0,
-            1.0
-        ],
-        "shadowOpacity": 1.0,
-        "shadowBlur": 1.0,
-        "shadowColor": "#c0b024",
-        "matRoughness": 0.75,
-        "matMetallic": 0.0,
-        "envIntensity": 1.0,
-        "envRotation": 0.0,
-        "envTint": "#ffffff",
-        "savedSplatUrl": "/exports/cb308b2a-60cd-465e-8ab8-fcd1aa114607/splat_cropped_64968444.ply",
-        "customModelUrl": "http://localhost:8000/projects_assets/cb308b2a-60cd-465e-8ab8-fcd1aa114607/axe_ueqgcaifa_high.glb",
-        "customModelName": "axe_ueqgcaifa_high.glb"
+        "activeModelId": "ilepgs6"
     }
 ]

@@ -174,7 +174,7 @@ export const ObjectSettingsPanel: React.FC<ObjectSettingsPanelProps> = ({ isMini
     return (
         <Panel className={`pointer-events-auto ${isMinimized ? "h-fit w-[280px]" : "h-full flex flex-col w-[280px]"}`}>
             {/* Header */}
-            <div className="flex justify-between items-center px-[16px]">
+            <div className="flex justify-between items-center px-[16px] h-10">
                 <h1 className="font-sans font-bold text-[16px] text-text-accent m-0 tracking-wide">
                     3D Object Settings
                 </h1>
@@ -190,7 +190,7 @@ export const ObjectSettingsPanel: React.FC<ObjectSettingsPanelProps> = ({ isMini
             </div>
 
             {!isMinimized && (
-                <div className="flex flex-col">
+                <div className="flex flex-col overflow-y-auto no-scrollbar flex-1">
                     <Divider />
 
                     {/* Objects List */}
