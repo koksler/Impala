@@ -11,3 +11,4 @@
 /impala-app/backend/routers/__pycache__
 /.prod-ready
 /impala-app/test-results
+*.zip
